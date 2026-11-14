@@ -1,5 +1,6 @@
 import { Component, inject, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Market } from '../../models';
 import { ApiService } from '../../services/api.service';
 
 @Component({
@@ -23,7 +24,12 @@ import { ApiService } from '../../services/api.service';
 
       <label>
         Market
-        <input [(ngModel)]="market" name="market" [placeholder]="symbol()" />
+        <select [(ngModel)]="market" name="market">
+          <option value="">Same as chart ({{ symbol() }})</option>
+          @for (m of markets(); track m.symbol) {
+            <option [value]="m.symbol">{{ m.symbol }}</option>
+          }
+        </select>
       </label>
 
       <label>
@@ -173,6 +179,7 @@ import { ApiService } from '../../services/api.service';
 })
 export class OrderTicketComponent {
   readonly symbol = input('BTCUSDT');
+  readonly markets = input<Market[]>([]);
   readonly dryRun = input(false);
 
   private readonly api = inject(ApiService);

@@ -134,9 +134,10 @@ def normalize_stats(payload: dict[str, Any]) -> list[dict[str, Any]]:
             src, dst = key.split("-", 1)
         else:
             src, dst = key, ""
+        quote = "IRT" if dst.lower() == "rls" else dst.upper()
         result.append(
             {
-                "symbol": f"{src.upper()}{dst.upper()}",
+                "symbol": f"{src.upper()}{quote}",
                 "src": src,
                 "dst": dst,
                 "price": _num(value.get("latest")),
@@ -149,6 +150,13 @@ def normalize_stats(payload: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return result
+
+
+def fetch_all_markets(client: NobitexClient | None = None) -> list[dict[str, Any]]:
+    """Return every market summary, mirroring the MCP ``nobitex_get_market_stats`` tool."""
+    client = client or get_client()
+    payload = client.request("GET", "/market/stats", auth=False)
+    return normalize_stats(payload)
 
 
 def fetch_orderbook(symbol: str, client: NobitexClient | None = None) -> dict[str, Any]:

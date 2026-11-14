@@ -187,6 +187,27 @@ def market_stats(
         raise _error(exc) from exc
 
 
+@app.get("/api/markets")
+def markets() -> dict[str, Any]:
+    try:
+        items = nobitex.fetch_all_markets()
+    except NobitexError as exc:
+        raise _error(exc) from exc
+
+    quote_priority = {"USDT": 0, "IRT": 1, "USD": 2, "EUR": 3, "BTC": 4, "ETH": 5}
+
+    def sort_key(item: dict[str, Any]) -> tuple[int, str]:
+        symbol = item["symbol"]
+        for quote, rank in quote_priority.items():
+            if symbol.endswith(quote):
+                return rank, symbol
+        return len(quote_priority), symbol
+
+    items = [item for item in items if item["price"]]
+    items.sort(key=sort_key)
+    return {"markets": items}
+
+
 @app.get("/api/market/orderbook/{symbol}")
 def market_orderbook(symbol: str) -> dict[str, Any]:
     try:

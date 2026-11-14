@@ -27,7 +27,18 @@
     <div class="toolbar">
       <label>
         Market
-        <input [value]="symbol()" (input)="onSymbolInput($event)" placeholder="BTCUSDT" />
+        <select
+          [ngModel]="symbol()"
+          (ngModelChange)="onMarketSelected($event)"
+          name="market"
+        >
+          @if (markets().length === 0) {
+            <option [value]="symbol()">{{ symbol() }}</option>
+          }
+          @for (market of markets(); track market.symbol) {
+            <option [value]="market.symbol">{{ market.symbol }}</option>
+          }
+        </select>
       </label>
       <label>
         Timeframe
@@ -114,7 +125,11 @@
         <app-chat-panel />
       }
       @case ('order') {
-        <app-order-ticket [symbol]="symbol()" [dryRun]="health()?.nobitex?.dry_run ?? true" />
+        <app-order-ticket
+          [symbol]="symbol()"
+          [markets]="markets()"
+          [dryRun]="health()?.nobitex?.dry_run ?? true"
+        />
       }
       @case ('scan') {
         @if (scan(); as s) {

@@ -1,13 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ApiService } from './services/api.service';
-import { Analysis, Health, ScanResult } from './models';
+import { Analysis, Health, Market, ScanResult } from './models';
 import { CandleChartComponent } from './components/candle-chart/candle-chart.component';
 import { ChatPanelComponent } from './components/chat-panel/chat-panel.component';
 import { OrderTicketComponent } from './components/order-ticket/order-ticket.component';
 
 @Component({
   selector: 'app-root',
-  imports: [CandleChartComponent, ChatPanelComponent, OrderTicketComponent],
+  imports: [CandleChartComponent, ChatPanelComponent, OrderTicketComponent, FormsModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -17,6 +18,7 @@ export class AppComponent implements OnInit {
   readonly health = signal<Health | null>(null);
   readonly analysis = signal<Analysis | null>(null);
   readonly scan = signal<ScanResult | null>(null);
+  readonly markets = signal<Market[]>([]);
   readonly loading = signal(false);
   readonly scanning = signal(false);
   readonly error = signal<string | null>(null);
@@ -44,7 +46,15 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadHealth();
+    this.loadMarkets();
     this.analyze();
+  }
+
+  loadMarkets(): void {
+    this.api.markets().subscribe({
+      next: (result) => this.markets.set(result.markets),
+      error: () => this.markets.set([]),
+    });
   }
 
   loadHealth(): void {
@@ -97,8 +107,9 @@ export class AppComponent implements OnInit {
     this.analyze();
   }
 
-  onSymbolInput(event: Event): void {
-    this.symbol.set((event.target as HTMLInputElement).value.toUpperCase());
+  onMarketSelected(symbol: string): void {
+    this.symbol.set(symbol);
+    this.analyze();
   }
 
   onResolutionChange(event: Event): void {

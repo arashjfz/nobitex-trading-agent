@@ -7,6 +7,17 @@ export interface Candle {
   v: number;
 }
 
+export interface Market {
+  symbol: string;
+  src: string;
+  dst: string;
+  price: number | null;
+  change_pct: number | null;
+  high: number | null;
+  low: number | null;
+  volume: number | null;
+}
+
 export interface Analysis {
   symbol: string;
   resolution: string;

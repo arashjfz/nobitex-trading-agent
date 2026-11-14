@@ -52,6 +52,44 @@ def test_analysis_endpoint(monkeypatch) -> None:
     assert response.json()["signal"] == "BUY"
 
 
+def test_markets_endpoint(monkeypatch) -> None:
+    monkeypatch.setattr(
+        nobitex,
+        "fetch_all_markets",
+        lambda client=None: [
+            {
+                "symbol": "BTCIRT",
+                "src": "btc",
+                "dst": "rls",
+                "price": 1.0,
+                "change_pct": 0.0,
+                "high": 1.0,
+                "low": 1.0,
+                "volume": 1.0,
+            },
+            {
+                "symbol": "ETHUSDT",
+                "src": "eth",
+                "dst": "usdt",
+                "price": 2.0,
+                "change_pct": 0.0,
+                "high": 2.0,
+                "low": 2.0,
+                "volume": 2.0,
+            },
+        ],
+    )
+    with TestClient(app) as client:
+        response = client.get("/api/markets")
+    assert response.status_code == 200
+    assert [m["symbol"] for m in response.json()["markets"]] == ["ETHUSDT", "BTCIRT"]
+
+
+def test_normalize_stats_maps_rls_to_irt() -> None:
+    items = nobitex.normalize_stats({"stats": {"btc-rls": {"latest": "1"}}})
+    assert items[0]["symbol"] == "BTCIRT"
+
+
 def test_opportunities_endpoint(monkeypatch) -> None:
     def fake_scan(symbols=None, resolution="60", countback=200, client=None):
         return {

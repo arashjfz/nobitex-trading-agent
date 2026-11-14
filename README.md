@@ -165,6 +165,7 @@ checkout. The agent exposes all 80 Nobitex tools (minus the blocked ones) plus
 | `POST` | `/api/chat` | Send a message (non-streaming) |
 | `WS` | `/ws/chat/{session_id}` | Streaming chat events |
 | `GET` | `/api/market/stats` | 24h ticker stats |
+| `GET` | `/api/markets` | All tradable markets for the UI selector |
 | `GET` | `/api/market/orderbook/{symbol}` | Order book |
 | `GET` | `/api/market/ohlc/{symbol}` | Raw candles |
 | `GET` | `/api/analysis/{symbol}?resolution=60` | Indicators + signal + trade plan |

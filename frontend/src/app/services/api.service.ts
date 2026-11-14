@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Analysis, Health, OrderRequest, ScanResult } from '../models';
+import { Analysis, Health, Market, OrderRequest, ScanResult } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -17,6 +17,10 @@ export class ApiService {
       `${this.base}/sessions`,
       {},
     );
+  }
+
+  markets(): Observable<{ markets: Market[] }> {
+    return this.http.get<{ markets: Market[] }>(`${this.base}/markets`);
   }
 
   analysis(symbol: string, resolution = '60'): Observable<Analysis> {

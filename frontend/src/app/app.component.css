@@ -132,6 +132,10 @@ h1 {
   min-width: 120px;
 }
 
+.toolbar select {
+  min-width: 150px;
+}
+
 .toolbar input:focus,
 .toolbar select:focus {
   outline: none;
