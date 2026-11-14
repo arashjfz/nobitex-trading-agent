@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     agent_max_iterations: int = 60
     agent_max_budget: float | None = None
 
+    # --- Scheduler ---------------------------------------------------------
+    scheduler_enabled: bool = True
+    scheduler_timezone: str = "Asia/Tehran"
+    scheduler_poll_seconds: float = 15.0
+    scheduler_run_timeout: float = 900.0
+    scheduler_api_url: str = "http://127.0.0.1:8011"
+    scheduler_db_path: Path = Field(default_factory=lambda: BACKEND_DIR / "scheduler.db")
+
     # --- Server ------------------------------------------------------------
     cors_origins: str = "http://localhost:4200,http://127.0.0.1:4200"
     workspace_root: Path = Field(default_factory=lambda: BACKEND_DIR / "workspace")

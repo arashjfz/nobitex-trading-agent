@@ -1,7 +1,16 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Analysis, Health, Market, OrderRequest, ScanResult } from '../models';
+import {
+  Analysis,
+  CronPreview,
+  Health,
+  Market,
+  OrderRequest,
+  ScanResult,
+  ScheduleRequest,
+  ScheduledTask,
+} from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -21,6 +30,35 @@ export class ApiService {
 
   markets(): Observable<{ markets: Market[] }> {
     return this.http.get<{ markets: Market[] }>(`${this.base}/markets`);
+  }
+
+  schedules(): Observable<{ timezone: string; tasks: ScheduledTask[] }> {
+    return this.http.get<{ timezone: string; tasks: ScheduledTask[] }>(
+      `${this.base}/schedules`,
+    );
+  }
+
+  createSchedule(body: ScheduleRequest): Observable<ScheduledTask> {
+    return this.http.post<ScheduledTask>(`${this.base}/schedules`, body);
+  }
+
+  updateSchedule(id: string, body: Partial<ScheduleRequest>): Observable<ScheduledTask> {
+    return this.http.patch<ScheduledTask>(`${this.base}/schedules/${id}`, body);
+  }
+
+  deleteSchedule(id: string): Observable<{ deleted: string }> {
+    return this.http.delete<{ deleted: string }>(`${this.base}/schedules/${id}`);
+  }
+
+  runSchedule(id: string): Observable<{ task_id: string; started: boolean }> {
+    return this.http.post<{ task_id: string; started: boolean }>(
+      `${this.base}/schedules/${id}/run`,
+      {},
+    );
+  }
+
+  validateCron(cron: string): Observable<CronPreview> {
+    return this.http.post<CronPreview>(`${this.base}/schedules/validate`, { cron });
   }
 
   analysis(symbol: string, resolution = '60'): Observable<Analysis> {

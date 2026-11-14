@@ -18,6 +18,36 @@ export interface Market {
   volume: number | null;
 }
 
+export interface ScheduledTask {
+  id: string;
+  name: string;
+  prompt: string;
+  cron: string;
+  enabled: boolean;
+  created_at: number;
+  next_run_at: number | null;
+  next_run: string | null;
+  last_run_at: number | null;
+  last_run: string | null;
+  last_status: string | null;
+  last_result: string | null;
+  run_count: number;
+}
+
+export interface ScheduleRequest {
+  name?: string;
+  prompt: string;
+  cron: string;
+  enabled?: boolean;
+}
+
+export interface CronPreview {
+  valid: boolean;
+  timezone?: string;
+  next_runs?: string[];
+  error?: string;
+}
+
 export interface Analysis {
   symbol: string;
   resolution: string;

@@ -5,10 +5,17 @@ import { Analysis, Health, Market, ScanResult } from './models';
 import { CandleChartComponent } from './components/candle-chart/candle-chart.component';
 import { ChatPanelComponent } from './components/chat-panel/chat-panel.component';
 import { OrderTicketComponent } from './components/order-ticket/order-ticket.component';
+import { SchedulePanelComponent } from './components/schedule-panel/schedule-panel.component';
 
 @Component({
   selector: 'app-root',
-  imports: [CandleChartComponent, ChatPanelComponent, OrderTicketComponent, FormsModule],
+  imports: [
+    CandleChartComponent,
+    ChatPanelComponent,
+    OrderTicketComponent,
+    SchedulePanelComponent,
+    FormsModule,
+  ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
@@ -24,7 +31,7 @@ export class AppComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly symbol = signal('BTCUSDT');
   readonly resolution = signal('60');
-  readonly tab = signal<'chat' | 'order' | 'scan'>('chat');
+  readonly tab = signal<'chat' | 'order' | 'scan' | 'schedule'>('chat');
 
   readonly resolutions = [
     { value: '15', label: '15m' },

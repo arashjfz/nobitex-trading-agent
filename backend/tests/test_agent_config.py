@@ -56,4 +56,11 @@ def test_filter_allows_everything_when_enabled() -> None:
 def test_agent_has_custom_tool_and_mcp() -> None:
     agent = build_agent(_settings())
     assert [tool.name for tool in agent.tools] == ["AnalyzeMarketTool"]
-    assert list(agent.mcp_config) == ["nobitex"]
+    assert list(agent.mcp_config) == ["nobitex", "scheduler"]
+
+
+def test_scheduler_mcp_is_wired_in() -> None:
+    config = build_mcp_config(_settings())
+    server = config["scheduler"]
+    assert server["args"] == ["-m", "app.scheduler_mcp"]
+    assert server["env"]["SCHEDULER_API_URL"].startswith("http://")

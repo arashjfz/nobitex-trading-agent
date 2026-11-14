@@ -29,6 +29,24 @@ class CancelRequest(BaseModel):
     order_id: int
 
 
+class ScheduleCreate(BaseModel):
+    name: str | None = Field(default=None, description="Optional label")
+    prompt: str = Field(min_length=1, description="Prompt the agent should run")
+    cron: str = Field(min_length=1, description="Cron expression, e.g. '0 9 * * *'")
+    enabled: bool = True
+
+
+class ScheduleUpdate(BaseModel):
+    name: str | None = None
+    prompt: str | None = None
+    cron: str | None = None
+    enabled: bool | None = None
+
+
+class CronRequest(BaseModel):
+    cron: str = Field(min_length=1)
+
+
 class AnalysisResponse(BaseModel):
     symbol: str
     resolution: str

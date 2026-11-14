@@ -165,6 +165,12 @@ class SessionManager:
         with self._lock:
             return list(self._sessions.values())
 
+    def remove(self, session_id: str) -> None:
+        with self._lock:
+            session = self._sessions.pop(session_id, None)
+        if session is not None:
+            session.close()
+
     def close_all(self) -> None:
         with self._lock:
             sessions = list(self._sessions.values())

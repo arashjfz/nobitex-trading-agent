@@ -143,13 +143,53 @@ credentials.
             "NOBITEX_READ_ONLY": "...",
             "NOBITEX_TOKEN": "...",          # when configured
         },
-    }
+    },
+    "scheduler": {
+        "command": sys.executable,
+        "args": ["-m", "app.scheduler_mcp"],
+        "cwd": "<repo>/backend",
+        "env": {"SCHEDULER_API_URL": "http://127.0.0.1:8011"},
+    },
 }
 ```
 
-The server is vendored under `mcp/nobitex-mcp`, so the project runs offline from a single
-checkout. The agent exposes all 80 Nobitex tools (minus the blocked ones) plus
+The Nobitex server is vendored under `mcp/nobitex-mcp`, so the project runs offline from a
+single checkout. The agent exposes all 80 Nobitex tools (minus the blocked ones) plus
 `AnalyzeMarketTool`.
+
+The `scheduler` server is part of this project (`backend/app/scheduler_mcp.py`). It exposes
+`schedule_task`, `list_scheduled_tasks`, `update_scheduled_task`, `cancel_scheduled_task`,
+`run_scheduled_task_now`, `validate_cron_expression`, and `get_scheduler_info` to the agent,
+so you can schedule work from chat as well as from the UI.
+
+---
+
+## Scheduling
+
+Scheduled tasks are recurring agent prompts. Each task stores a prompt, a five-field cron
+expression, and a timezone (`SCHEDULER_TIMEZONE`, default `Asia/Tehran`). A background
+thread in the API process checks for due tasks every `SCHEDULER_POLL_SECONDS`, runs the
+prompt through a fresh agent session, and records the final answer, status, and run count.
+Tasks survive restarts in `backend/scheduler.db` (SQLite).
+
+Examples:
+
+| Intent | Cron |
+| --- | --- |
+| Every 30 minutes | `*/30 * * * *` |
+| Every day at 09:00 | `0 9 * * *` |
+| Weekdays at 09:00 | `0 9 * * 1-5` |
+| Every Monday at 08:00 | `0 8 * * 1` |
+
+From the UI, open the **Schedule** tab: write the prompt, pick a cron preset (or type one),
+check the next run times, and press **Schedule task**. From chat, just ask, e.g.
+_"every day at 9am find the best opportunities and buy or sell up to 50 dollars"_ — the
+agent converts it to cron, validates it, and calls `schedule_task`.
+
+Scheduled prompts run unattended. Keep them self-contained (budget, markets, stop-loss)
+and remember that paper trading (`NOBITEX_DRY_RUN=true`) is the default. Runs missed while
+the API was down are skipped: on startup each task is re-armed for its next future
+occurrence.
 
 ---
 
@@ -174,6 +214,12 @@ checkout. The agent exposes all 80 Nobitex tools (minus the blocked ones) plus
 | `POST` | `/api/orders` | Place an order |
 | `POST` | `/api/orders/cancel` | Cancel an order |
 | `GET` | `/api/wallets` | Wallet balances |
+| `GET` | `/api/schedules` | List scheduled tasks and scheduler timezone |
+| `POST` | `/api/schedules` | Create a scheduled prompt |
+| `PATCH` | `/api/schedules/{id}` | Update prompt, cron, name, or enabled |
+| `DELETE` | `/api/schedules/{id}` | Delete a scheduled task |
+| `POST` | `/api/schedules/{id}/run` | Run a task now |
+| `POST` | `/api/schedules/validate` | Validate cron and preview next runs |
 
 WebSocket events are `Ready`, `MessageEvent`, `ActionEvent`, `ObservationEvent`, `Error`,
 and `Done`, mirroring the OpenHands SDK event stream.

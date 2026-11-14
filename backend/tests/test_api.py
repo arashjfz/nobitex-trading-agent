@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app import nobitex
+from app import main
 from app.main import app
 
 
@@ -88,6 +89,45 @@ def test_markets_endpoint(monkeypatch) -> None:
 def test_normalize_stats_maps_rls_to_irt() -> None:
     items = nobitex.normalize_stats({"stats": {"btc-rls": {"latest": "1"}}})
     assert items[0]["symbol"] == "BTCIRT"
+
+
+def test_validate_cron_endpoint() -> None:
+    with TestClient(app) as client:
+        response = client.post("/api/schedules/validate", json={"cron": "0 9 * * *"})
+    body = response.json()
+    assert response.status_code == 200
+    assert body["valid"] is True
+    assert len(body["next_runs"]) == 3
+
+
+def test_validate_cron_rejects_bad_expression() -> None:
+    with TestClient(app) as client:
+        response = client.post("/api/schedules/validate", json={"cron": "nope"})
+    assert response.status_code == 200
+    assert response.json()["valid"] is False
+
+
+def test_create_schedule_endpoint(monkeypatch) -> None:
+    captured: dict = {}
+
+    def fake_create(prompt, cron, name=None, enabled=True):
+        captured.update(prompt=prompt, cron=cron, name=name, enabled=enabled)
+        return {"id": "t1", "prompt": prompt, "cron": cron, "name": name, "enabled": enabled}
+
+    monkeypatch.setattr(main.scheduler, "create", fake_create)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/schedules",
+            json={"prompt": "buy up to $50", "cron": "*/30 * * * *", "name": "scan"},
+        )
+    assert response.status_code == 200
+    assert response.json()["id"] == "t1"
+    assert captured == {
+        "prompt": "buy up to $50",
+        "cron": "*/30 * * * *",
+        "name": "scan",
+        "enabled": True,
+    }
 
 
 def test_opportunities_endpoint(monkeypatch) -> None:

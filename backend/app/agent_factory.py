@@ -8,7 +8,7 @@ from typing import Any
 from openhands.sdk import LLM, Agent, Tool
 from openhands.sdk.tool import register_tool
 
-from .config import Settings
+from .config import BACKEND_DIR, Settings
 from .prompts import TRADING_SYSTEM_PROMPT
 from .tools import AnalyzeMarketTool
 
@@ -81,7 +81,7 @@ def build_mcp_config(settings: Settings) -> dict[str, dict[str, Any]]:
         if value:
             env[key] = value
 
-    return {
+    config: dict[str, dict[str, Any]] = {
         "nobitex": {
             "command": sys.executable,
             "args": ["-m", "nobitex_mcp"],
@@ -89,6 +89,17 @@ def build_mcp_config(settings: Settings) -> dict[str, dict[str, Any]]:
             "env": env,
         }
     }
+    if settings.scheduler_enabled:
+        config["scheduler"] = {
+            "command": sys.executable,
+            "args": ["-m", "app.scheduler_mcp"],
+            "cwd": str(BACKEND_DIR),
+            "env": {
+                "PYTHONPATH": str(BACKEND_DIR),
+                "SCHEDULER_API_URL": settings.scheduler_api_url,
+            },
+        }
+    return config
 
 
 def build_llm(settings: Settings) -> LLM:
