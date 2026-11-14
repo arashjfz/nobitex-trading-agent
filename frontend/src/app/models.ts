@@ -155,6 +155,8 @@ export interface ChatEvent {
   thought?: string;
   action?: unknown;
   observation?: string;
+  data?: unknown;
+  summary?: string;
   is_error?: boolean;
   error?: string;
   session_id?: string;
@@ -166,4 +168,8 @@ export interface ChatMessage {
   text: string;
   tool?: string;
   time: number;
+  kind?: 'text' | 'action' | 'observation';
+  args?: Record<string, unknown>;
+  data?: unknown;
+  failed?: boolean;
 }

@@ -46,3 +46,117 @@ textarea {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Rendered agent markdown (chat assistant messages) */
+.markdown {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 12px 0 6px;
+  line-height: 1.25;
+  color: #f1f5f9;
+}
+
+.markdown h1 {
+  font-size: 16px;
+}
+
+.markdown h2 {
+  font-size: 14px;
+}
+
+.markdown h3,
+.markdown h4 {
+  font-size: 12.5px;
+}
+
+.markdown p {
+  margin: 0 0 8px;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+}
+
+.markdown li {
+  margin: 2px 0;
+}
+
+.markdown strong {
+  color: #f8fafc;
+}
+
+.markdown code {
+  background: #0b1220;
+  border: 1px solid #1e293b;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: #bae6fd;
+}
+
+.markdown pre {
+  background: #0b1220;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 8px 10px;
+  overflow-x: auto;
+}
+
+.markdown pre code {
+  border: none;
+  padding: 0;
+  background: none;
+  color: #cbd5e1;
+}
+
+.markdown .table-wrap {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid #1e293b;
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown th {
+  background: #111c2e;
+  color: #94a3b8;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.markdown hr {
+  border: none;
+  border-top: 1px solid #1e293b;
+  margin: 10px 0;
+}
+
+.markdown a {
+  color: #38bdf8;
+}

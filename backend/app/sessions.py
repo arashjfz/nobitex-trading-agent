@@ -39,7 +39,17 @@ def _blocks_text(blocks: Any) -> str:
 
 
 def _content_text(message: Any) -> str:
-    return _blocks_text(getattr(message, "content", None))
+    text = _blocks_text(getattr(message, "content", None))
+    if text.strip():
+        return text
+    # Custom observations keep their payload in to_llm_content, not content.
+    to_llm = getattr(message, "to_llm_content", None)
+    if to_llm is not None:
+        try:
+            return _blocks_text(to_llm)
+        except Exception:  # noqa: BLE001 - fall back to an empty observation
+            return ""
+    return ""
 
 
 def _json_safe(value: Any) -> Any:
@@ -100,6 +110,10 @@ def serialize_event(event: Any) -> dict[str, Any] | None:
         payload["tool_name"] = event.tool_name
         payload["is_error"] = bool(event.observation.is_error)
         payload["observation"] = _content_text(event.observation)
+        analysis = getattr(event.observation, "analysis", None)
+        if isinstance(analysis, dict):
+            payload["data"] = _json_safe(analysis)
+            payload["summary"] = getattr(event.observation, "summary", "")
         return _json_safe(payload)
 
     if isinstance(event, AgentErrorEvent):

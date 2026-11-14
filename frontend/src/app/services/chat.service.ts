@@ -131,14 +131,19 @@ export class ChatService {
         }
         break;
       case 'ActionEvent': {
-        const detail = event.thought?.trim() || this.describeAction(event.action);
-        this.push('tool', detail, event.tool_name);
+        this.push('tool', event.thought?.trim() ?? '', event.tool_name, {
+          kind: 'action',
+          args: this.actionArgs(event.action),
+        });
         break;
       }
       case 'ObservationEvent': {
-        const text = (event.observation ?? '').trim();
-        const clipped = text.length > 1500 ? `${text.slice(0, 1500)}…` : text;
-        this.push('tool', clipped || '(empty result)', `${event.tool_name} result`);
+        const parsed = this.parseObservation(event.observation);
+        this.push('tool', parsed.text, event.tool_name, {
+          kind: 'observation',
+          data: event.data ?? parsed.data,
+          failed: event.is_error,
+        });
         break;
       }
       case 'AgentErrorEvent':
@@ -154,25 +159,53 @@ export class ChatService {
     }
   }
 
-  private describeAction(action: unknown): string {
-    if (!action) {
-      return 'Calling tool…';
+  private actionArgs(action: unknown): Record<string, unknown> | undefined {
+    if (!action || typeof action !== 'object' || Array.isArray(action)) {
+      return undefined;
     }
-    try {
-      const text = JSON.stringify(action);
-      return text.length > 500 ? `${text.slice(0, 500)}…` : text;
-    } catch {
-      return 'Calling tool…';
+    const raw = { ...(action as Record<string, unknown>) };
+    delete raw['kind'];
+    const data = raw['data'];
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      delete raw['data'];
+      return { ...raw, ...(data as Record<string, unknown>) };
     }
+    return raw;
   }
 
-  private push(role: ChatMessage['role'], text: string, tool?: string): void {
+  private parseObservation(observation: string | undefined): {
+    text: string;
+    data?: unknown;
+  } {
+    let text = (observation ?? '').trim();
+    const prefix = /^\[Tool '[^']+' executed\.\]\s*/;
+    text = text.replace(prefix, '');
+    if (!text) {
+      return { text: '' };
+    }
+    if (text.startsWith('{') || text.startsWith('[')) {
+      try {
+        return { text, data: JSON.parse(text) };
+      } catch {
+        return { text };
+      }
+    }
+    return { text };
+  }
+
+  private push(
+    role: ChatMessage['role'],
+    text: string,
+    tool?: string,
+    extra?: Partial<ChatMessage>,
+  ): void {
     const message: ChatMessage = {
       id: `m${this.counter++}`,
       role,
       text,
       tool,
       time: Date.now(),
+      ...extra,
     };
     this.messages.update((current) => [...current, message]);
   }

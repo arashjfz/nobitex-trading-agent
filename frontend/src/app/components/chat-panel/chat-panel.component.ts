@@ -9,11 +9,13 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../services/chat.service';
+import { MarkdownPipe } from '../../pipes/markdown.pipe';
+import { ToolViewComponent } from '../tool-view/tool-view.component';
 
 @Component({
   selector: 'app-chat-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule],
+  imports: [FormsModule, MarkdownPipe, ToolViewComponent],
   template: `
     <section class="chat">
       <header>
@@ -42,11 +44,14 @@ import { ChatService } from '../../services/chat.service';
           <article class="msg" [class]="message.role">
             <div class="meta">
               <span class="who">{{ label(message.role) }}</span>
-              @if (message.tool) {
-                <span class="tool">{{ message.tool }}</span>
-              }
             </div>
-            <pre>{{ message.text }}</pre>
+            @if (message.role === 'assistant') {
+              <div class="markdown" [innerHTML]="message.text | markdown"></div>
+            } @else if (message.role === 'tool') {
+              <app-tool-view [message]="message" />
+            } @else {
+              <pre>{{ message.text }}</pre>
+            }
           </article>
         }
         @if (chat.running()) {

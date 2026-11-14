@@ -50,6 +50,24 @@ confidence score, support/resistance levels, and an ATR-based entry / stop / tar
 
 ---
 
+### Chat rendering
+
+Tool output is rendered by `ToolViewComponent`, not dumped as JSON:
+
+| Tool | View |
+|---|---|
+| `nobitex_get_orderbook` | Two-sided depth grid: top 8 levels, cumulative size, depth bars, spread/mid/last |
+| `analyze_market` | Signal card with score/confidence, price, entry/stop/target/support/resistance, indicator table, reasons |
+| `nobitex_server_info` | Environment, credentials, read-only and dry-run grid plus paper balances |
+| `nobitex_get_wallets` | Balance table (balance / active / blocked) |
+| `nobitex_get_market_stats` | Market table (last, 24h %, high/low, volume, bid/ask) |
+| `nobitex_list_orders`, order status, place order | Order table |
+| `nobitex_get_recent_trades`, user trades | Trade table |
+| anything else | Key/value grid, nested sections and compact tables; null/empty fields are dropped |
+
+Tool calls appear as argument chips (e.g. `symbol BTCUSDT · resolution 1h`), and assistant
+messages render headings, lists, tables and code instead of raw markdown.
+
 ## Quick start
 
 ### 1. Backend

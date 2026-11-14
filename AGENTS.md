@@ -65,3 +65,9 @@ frontend proxy (`frontend/proxy.conf.json`) must match the backend port.
   `runtime_settings.ENV_PATH` to a temp file so they never touch the real `.env`.
 - The settings panel intentionally uses default change detection: it updates plain
   properties from async HTTP callbacks, which `OnPush` would not render.
+- `ToolViewComponent` owns tool-result rendering; `ChatService` strips the
+  `[Tool '…' executed.]` prefix and parses JSON into `ChatMessage.data`. Custom tools must
+  expose structured data through `serialize_event` (see `analysis` on
+  `AnalyzeMarketObservation`) so the UI can render cards instead of raw JSON.
+- `MarkdownPipe` is a deliberately small renderer (headings, lists, tables, code, bold,
+  links). It escapes HTML before emitting tags, so do not bypass Angular sanitization.
