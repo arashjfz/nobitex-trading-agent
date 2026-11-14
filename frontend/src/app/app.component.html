@@ -1,0 +1,168 @@
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◈</span>
+    <div>
+      <h1>Nobi</h1>
+      <p>Nobitex trading agent · OpenHands Agent SDK</p>
+    </div>
+  </div>
+  <div class="badges">
+    @if (health(); as h) {
+      <span class="badge">{{ h.nobitex.environment }}</span>
+      <span class="badge" [class.paper]="h.nobitex.dry_run" [class.live]="!h.nobitex.dry_run">
+        {{ h.nobitex.dry_run ? 'PAPER' : 'LIVE' }}
+      </span>
+      @if (h.nobitex.read_only) {
+        <span class="badge">READ-ONLY</span>
+      }
+      <span class="badge model">{{ h.llm.model }}</span>
+    } @else {
+      <span class="badge">connecting…</span>
+    }
+  </div>
+</header>
+
+<main class="layout">
+  <section class="card left">
+    <div class="toolbar">
+      <label>
+        Market
+        <input [value]="symbol()" (input)="onSymbolInput($event)" placeholder="BTCUSDT" />
+      </label>
+      <label>
+        Timeframe
+        <select [value]="resolution()" (change)="onResolutionChange($event)">
+          @for (option of resolutions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+      <button type="button" (click)="analyze()" [disabled]="loading()">
+        {{ loading() ? 'Analyzing…' : 'Analyze' }}
+      </button>
+      <button type="button" class="ghost" (click)="scanMarket()" [disabled]="scanning()">
+        {{ scanning() ? 'Scanning…' : 'Scan market' }}
+      </button>
+    </div>
+
+    @if (error(); as message) {
+      <pre class="error">{{ message }}</pre>
+    }
+
+    @if (analysis(); as a) {
+      <div class="price-row">
+        <div class="ident">
+          <h2>{{ a.symbol }}</h2>
+          <p class="sub">{{ a.resolution }}m · {{ time(a.as_of) }}</p>
+        </div>
+        <div class="price">{{ fmt(a.last_price) }}</div>
+        <span class="signal" [class]="signalClass(a.signal)">{{ a.signal }}</span>
+        <span class="conf">confidence {{ pct(a.confidence) }}</span>
+      </div>
+
+      <app-candle-chart [candles]="a.candles" />
+
+      <div class="grid2">
+        <div class="panel">
+          <h3>Indicators</h3>
+          <dl>
+            @for (row of indicatorRows; track row.key) {
+              <div>
+                <dt>{{ row.label }}</dt>
+                <dd>{{ fmt(a.indicators[row.key], row.digits) }}</dd>
+              </div>
+            }
+          </dl>
+        </div>
+        <div class="panel">
+          <h3>Trade plan</h3>
+          <dl>
+            <div><dt>Entry</dt><dd>{{ fmt(a.levels.entry) }}</dd></div>
+            <div><dt>Stop-loss</dt><dd class="down">{{ fmt(a.levels.stop_loss) }}</dd></div>
+            <div><dt>Take-profit</dt><dd class="up">{{ fmt(a.levels.take_profit) }}</dd></div>
+            <div><dt>Risk / reward</dt><dd>1 : {{ a.levels.risk_reward }}</dd></div>
+            <div><dt>Support</dt><dd>{{ fmt(a.levels.support) }}</dd></div>
+            <div><dt>Resistance</dt><dd>{{ fmt(a.levels.resistance) }}</dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Why this signal</h3>
+        <ul class="reasons">
+          @for (reason of a.reasons; track $index) {
+            <li>{{ reason }}</li>
+          }
+        </ul>
+      </div>
+    } @else if (!loading()) {
+      <p class="empty">Run an analysis to see signals.</p>
+    }
+  </section>
+
+  <aside class="card right">
+    <nav class="tabs">
+      <button type="button" [class.active]="tab() === 'chat'" (click)="tab.set('chat')">Chat</button>
+      <button type="button" [class.active]="tab() === 'order'" (click)="tab.set('order')">Order</button>
+      <button type="button" [class.active]="tab() === 'scan'" (click)="tab.set('scan')">
+        Opportunities
+      </button>
+    </nav>
+
+    @switch (tab()) {
+      @case ('chat') {
+        <app-chat-panel />
+      }
+      @case ('order') {
+        <app-order-ticket [symbol]="symbol()" [dryRun]="health()?.nobitex?.dry_run ?? true" />
+      }
+      @case ('scan') {
+        @if (scan(); as s) {
+          @if (s.opportunities.length === 0) {
+            <p class="empty">No opportunities returned.</p>
+          } @else {
+            <table class="scan">
+              <thead>
+                <tr>
+                  <th>Market</th>
+                  <th>Signal</th>
+                  <th>Score</th>
+                  <th>Conf.</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of s.opportunities; track item.symbol) {
+                  <tr (click)="selectOpportunity(item.symbol)">
+                    <td class="sym">{{ item.symbol }}</td>
+                    <td><span class="signal" [class]="signalClass(item.signal)">{{ item.signal }}</span></td>
+                    <td>{{ item.score.toFixed(2) }}</td>
+                    <td>{{ pct(item.confidence) }}</td>
+                    <td>{{ fmt(item.last_price) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+          @if (s.errors.length > 0) {
+            <div class="panel errors">
+              <h3>{{ s.errors.length }} market(s) failed</h3>
+              <ul>
+                @for (item of s.errors; track item.symbol) {
+                  <li>{{ item.symbol }}: {{ item.error }}</li>
+                }
+              </ul>
+            </div>
+          }
+        } @else {
+          <p class="empty">Click “Scan market” to rank opportunities.</p>
+        }
+      }
+    }
+  </aside>
+</main>
+
+<footer class="disclaimer">
+  Crypto trading carries substantial risk. This assistant is not a financial advisor and
+  paper mode is on by default. You are responsible for every order.
+</footer>
