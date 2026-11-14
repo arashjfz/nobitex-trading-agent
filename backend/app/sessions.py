@@ -17,13 +17,49 @@ from .config import Settings
 _EVENT_TYPES = (MessageEvent, ActionEvent, ObservationEvent, AgentErrorEvent)
 
 
-def _content_text(message: Any) -> str:
+def _blocks_text(blocks: Any) -> str:
+    """Flatten SDK content blocks (TextContent, Message, str) into plain text."""
+    if blocks is None:
+        return ""
+    if isinstance(blocks, str):
+        return blocks
+    if not isinstance(blocks, (list, tuple)):
+        blocks = [blocks]
     parts: list[str] = []
-    for block in getattr(message, "content", None) or []:
+    for block in blocks:
+        if isinstance(block, str):
+            parts.append(block)
+            continue
         text = getattr(block, "text", None)
-        if text:
+        if isinstance(text, str):
             parts.append(text)
+        elif text is not None:
+            parts.append(str(text))
     return "\n".join(parts)
+
+
+def _content_text(message: Any) -> str:
+    return _blocks_text(getattr(message, "content", None))
+
+
+def _json_safe(value: Any) -> Any:
+    """Best-effort conversion of SDK objects into JSON-serializable values."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+    dump = getattr(value, "model_dump", None)
+    if callable(dump):
+        try:
+            return _json_safe(dump(mode="json", exclude_none=True))
+        except Exception:  # noqa: BLE001 - fall through to text/str
+            pass
+    text = getattr(value, "text", None)
+    if isinstance(text, str):
+        return text
+    return str(value)
 
 
 def _safe_dump(value: Any) -> Any:
@@ -32,10 +68,10 @@ def _safe_dump(value: Any) -> Any:
     dump = getattr(value, "model_dump", None)
     if callable(dump):
         try:
-            return dump(mode="json", exclude_none=True)
+            return _json_safe(dump(mode="json", exclude_none=True))
         except Exception:  # noqa: BLE001 - best-effort serialization
             return str(value)
-    return str(value)
+    return _json_safe(value)
 
 
 def serialize_event(event: Any) -> dict[str, Any] | None:
@@ -52,19 +88,19 @@ def serialize_event(event: Any) -> dict[str, Any] | None:
     if isinstance(event, MessageEvent):
         payload["source"] = event.source
         payload["text"] = _content_text(event.llm_message)
-        return payload
+        return _json_safe(payload)
 
     if isinstance(event, ActionEvent):
         payload["tool_name"] = event.tool_name
-        payload["thought"] = event.thought
+        payload["thought"] = _blocks_text(event.thought)
         payload["action"] = _safe_dump(event.action)
-        return payload
+        return _json_safe(payload)
 
     if isinstance(event, ObservationEvent):
         payload["tool_name"] = event.tool_name
         payload["is_error"] = bool(event.observation.is_error)
         payload["observation"] = _content_text(event.observation)
-        return payload
+        return _json_safe(payload)
 
     if isinstance(event, AgentErrorEvent):
         payload["error"] = getattr(event, "error", str(event))

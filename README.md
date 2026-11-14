@@ -107,6 +107,20 @@ Nobitex supports two auth styles; the MCP server accepts either:
 
 Credentials are passed to the MCP subprocess through its environment and are never logged.
 
+### Configuration UI
+
+The **Settings** tab edits the same values and persists them to `.env` (mode `600`):
+
+- **LLM** — model, base URL, API key, temperature, plus a **Test LLM** probe.
+- **Nobitex** — mainnet/testnet, base-URL override, auth mode, token or Ed25519 keys,
+  dry-run and read-only switches, plus a **Test Nobitex** probe.
+- **Agent & scheduler** — max iterations, scheduler on/off, timezone, and the
+  withdrawal-tool switch (off by default).
+
+Secrets are never returned by the API; the UI only shows whether a value is stored. Saving
+resets the current chat so the next session is built with the new configuration. The API
+has no authentication and binds to localhost by default — do not expose it publicly.
+
 ---
 
 ## Safety model
@@ -220,6 +234,10 @@ occurrence.
 | `DELETE` | `/api/schedules/{id}` | Delete a scheduled task |
 | `POST` | `/api/schedules/{id}/run` | Run a task now |
 | `POST` | `/api/schedules/validate` | Validate cron and preview next runs |
+| `GET` | `/api/settings` | Masked runtime configuration |
+| `PUT` | `/api/settings` | Update configuration and persist it to `.env` |
+| `POST` | `/api/settings/test/llm` | Probe the configured LLM endpoint |
+| `POST` | `/api/settings/test/nobitex` | Probe the configured Nobitex endpoint |
 
 WebSocket events are `Ready`, `MessageEvent`, `ActionEvent`, `ObservationEvent`, `Error`,
 and `Done`, mirroring the OpenHands SDK event stream.

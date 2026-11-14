@@ -313,7 +313,8 @@ h1 {
 
 .right app-chat-panel,
 .right app-order-ticket,
-.right app-schedule-panel {
+.right app-schedule-panel,
+.right app-settings-panel {
   flex: 1;
   min-height: 0;
   overflow-y: auto;

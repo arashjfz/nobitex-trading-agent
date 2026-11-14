@@ -12,6 +12,27 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, description="User instruction for the agent")
 
 
+class SettingsUpdate(BaseModel):
+    """Partial runtime configuration. Omitted fields are left unchanged."""
+
+    llm_model: str | None = None
+    llm_api_key: str | None = None
+    llm_base_url: str | None = None
+    llm_temperature: float | None = None
+    nobitex_env: Literal["mainnet", "testnet"] | None = None
+    nobitex_base_url: str | None = None
+    nobitex_token: str | None = None
+    nobitex_public_key: str | None = None
+    nobitex_private_key: str | None = None
+    nobitex_auth_mode: Literal["token", "key"] | None = None
+    nobitex_dry_run: bool | None = None
+    nobitex_read_only: bool | None = None
+    allow_withdrawals: bool | None = None
+    agent_max_iterations: int | None = None
+    scheduler_enabled: bool | None = None
+    scheduler_timezone: str | None = None
+
+
 class SessionResponse(BaseModel):
     session_id: str
     created_at: float

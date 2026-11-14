@@ -14,19 +14,28 @@ export class ChatService {
 
   private socket?: WebSocket;
   private counter = 0;
+  private manualClose = false;
+  private retry = 0;
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
 
   async connect(): Promise<void> {
     if (this.socket && this.socket.readyState <= WebSocket.OPEN) {
       return;
     }
+    this.manualClose = false;
     this.status.set('connecting');
     let sessionId = this.sessionId();
     if (!sessionId) {
-      const session = await firstValueFrom(this.api.createSession());
-      sessionId = session?.session_id ?? null;
+      try {
+        const session = await firstValueFrom(this.api.createSession());
+        sessionId = session?.session_id ?? null;
+      } catch {
+        sessionId = null;
+      }
       if (!sessionId) {
-        this.push('error', 'Could not create a chat session.');
+        this.push('error', 'Could not create a chat session. Is the backend running?');
         this.status.set('closed');
+        this.scheduleReconnect();
         return;
       }
       this.sessionId.set(sessionId);
@@ -36,9 +45,28 @@ export class ChatService {
     const socket = new WebSocket(`${protocol}://${location.host}/ws/chat/${sessionId}`);
     this.socket = socket;
 
-    socket.onopen = () => this.status.set('open');
-    socket.onclose = () => this.status.set('closed');
-    socket.onerror = () => this.push('error', 'WebSocket connection error.');
+    socket.onopen = () => {
+      this.retry = 0;
+      this.status.set('open');
+    };
+    socket.onclose = () => {
+      this.socket = undefined;
+      if (this.manualClose) {
+        this.status.set('idle');
+        return;
+      }
+      this.status.set('closed');
+      if (this.running()) {
+        this.running.set(false);
+        this.push('error', 'Connection closed before the agent finished. Reconnecting…');
+      }
+      this.scheduleReconnect();
+    };
+    socket.onerror = () => {
+      if (this.status() !== 'closed') {
+        this.push('error', 'WebSocket connection error.');
+      }
+    };
     socket.onmessage = (message) => {
       try {
         this.handle(JSON.parse(message.data) as ChatEvent);
@@ -46,6 +74,18 @@ export class ChatService {
         this.push('error', 'Received an unreadable event from the server.');
       }
     };
+  }
+
+  private scheduleReconnect(): void {
+    if (this.manualClose || this.reconnectTimer) {
+      return;
+    }
+    const delay = Math.min(1000 * 2 ** this.retry, 10_000);
+    this.retry += 1;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      void this.connect();
+    }, delay);
   }
 
   send(text: string): boolean {
@@ -64,6 +104,11 @@ export class ChatService {
   }
 
   reset(): void {
+    this.manualClose = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
     this.socket?.close();
     this.socket = undefined;
     this.sessionId.set(null);

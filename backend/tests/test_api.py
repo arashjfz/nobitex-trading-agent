@@ -189,3 +189,14 @@ def test_session_lifecycle() -> None:
 
         missing = client.get("/api/sessions/does-not-exist")
         assert missing.status_code == 404
+
+
+def test_settings_endpoint_masks_secrets() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/settings")
+    assert response.status_code == 200
+    body = response.json()
+    assert "api_key_set" in body["llm"]
+    assert "llm_api_key" not in body["llm"]
+    assert "token" not in {key for key in body["nobitex"] if key != "token_set"}
+    assert body["nobitex"]["base_url"].startswith("http")

@@ -57,3 +57,11 @@ frontend proxy (`frontend/proxy.conf.json`) must match the backend port.
   marked `interrupted`.
 - Scheduled prompts run unattended with the same safety flags as chat; keep
   `NOBITEX_DRY_RUN=true` unless the operator explicitly opts in.
+- `ActionEvent.thought` is a `Sequence[TextContent]`, not a string. Always run websocket
+  payloads through `sessions._blocks_text` / `_json_safe`; a raw `send_json` raises
+  `TypeError` and closes the chat socket.
+- `PUT /api/settings` mutates the cached `Settings` object and writes `.env`. It clears
+  `nobitex.get_client` so new calls use the new credentials. Tests must monkeypatch
+  `runtime_settings.ENV_PATH` to a temp file so they never touch the real `.env`.
+- The settings panel intentionally uses default change detection: it updates plain
+  properties from async HTTP callbacks, which `OnPush` would not render.

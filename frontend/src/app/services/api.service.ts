@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   Analysis,
+  AppSettings,
   CronPreview,
   Health,
   Market,
@@ -10,6 +11,7 @@ import {
   ScanResult,
   ScheduleRequest,
   ScheduledTask,
+  SettingsUpdate,
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -89,5 +91,27 @@ export class ApiService {
 
   cancelOrder(orderId: number): Observable<unknown> {
     return this.http.post<unknown>(`${this.base}/orders/cancel`, { order_id: orderId });
+  }
+
+  settings(): Observable<AppSettings> {
+    return this.http.get<AppSettings>(`${this.base}/settings`);
+  }
+
+  updateSettings(body: SettingsUpdate): Observable<AppSettings> {
+    return this.http.put<AppSettings>(`${this.base}/settings`, body);
+  }
+
+  testLlm(): Observable<{ ok: boolean; detail: string }> {
+    return this.http.post<{ ok: boolean; detail: string }>(
+      `${this.base}/settings/test/llm`,
+      {},
+    );
+  }
+
+  testNobitex(): Observable<{ ok: boolean; detail: string }> {
+    return this.http.post<{ ok: boolean; detail: string }>(
+      `${this.base}/settings/test/nobitex`,
+      {},
+    );
   }
 }

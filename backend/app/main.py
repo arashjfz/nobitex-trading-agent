@@ -7,6 +7,7 @@ import queue
 from contextlib import asynccontextmanager
 from typing import Any
 
+import httpx
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from nobitex_mcp import NobitexError
@@ -14,6 +15,7 @@ from nobitex_mcp import NobitexError
 from . import nobitex
 from .agent_factory import _BLOCKED_MCP_TOOLS, build_mcp_config
 from .config import get_settings
+from .runtime_settings import apply_settings_update, masked_settings
 from .schemas import (
     CancelRequest,
     ChatRequest,
@@ -22,6 +24,7 @@ from .schemas import (
     ScheduleCreate,
     ScheduleUpdate,
     SessionResponse,
+    SettingsUpdate,
 )
 from .scheduler import Scheduler
 from .sessions import SessionManager
@@ -114,6 +117,52 @@ def config() -> dict[str, Any]:
     }
 
 
+@app.get("/api/settings")
+def get_runtime_settings() -> dict[str, Any]:
+    return masked_settings(settings)
+
+
+@app.put("/api/settings")
+def update_runtime_settings(request: SettingsUpdate) -> dict[str, Any]:
+    was_enabled = settings.scheduler_enabled
+    try:
+        updated = apply_settings_update(settings, request.model_dump(exclude_unset=True))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if settings.scheduler_enabled and not was_enabled:
+        scheduler.start()
+    elif was_enabled and not settings.scheduler_enabled:
+        scheduler.stop()
+    return updated
+
+
+@app.post("/api/settings/test/llm")
+def test_llm_settings() -> dict[str, Any]:
+    if not settings.llm_api_key:
+        return {"ok": False, "detail": "No LLM API key configured"}
+    if not settings.llm_base_url:
+        return {"ok": True, "detail": "No base URL set; provider probe skipped"}
+    try:
+        response = httpx.get(
+            settings.llm_base_url.rstrip("/") + "/models",
+            headers={"Authorization": f"Bearer {settings.llm_api_key}"},
+            timeout=15,
+        )
+    except httpx.HTTPError as exc:
+        return {"ok": False, "detail": str(exc)}
+    return {"ok": response.status_code < 400, "detail": f"HTTP {response.status_code}"}
+
+
+@app.post("/api/settings/test/nobitex")
+def test_nobitex_settings() -> dict[str, Any]:
+    try:
+        payload = nobitex.fetch_market_stats("btc", "usdt")
+        markets = nobitex.normalize_stats(payload)
+    except NobitexError as exc:
+        return {"ok": False, "detail": str(exc)}
+    return {"ok": True, "detail": f"{len(markets)} markets reachable"}
+
+
 # --------------------------------------------------------------------------
 # Sessions & chat
 # --------------------------------------------------------------------------
@@ -168,7 +217,11 @@ async def chat_socket(websocket: WebSocket, session_id: str) -> None:
     await websocket.send_json({"type": "Ready", "session_id": session_id})
     try:
         while True:
-            data = await websocket.receive_json()
+            try:
+                data = await websocket.receive_json()
+            except ValueError:
+                await websocket.send_json({"type": "Error", "error": "Invalid JSON payload"})
+                continue
             message = str((data or {}).get("message", "")).strip()
             if not message:
                 continue
@@ -183,11 +236,22 @@ async def chat_socket(websocket: WebSocket, session_id: str) -> None:
                     event = await asyncio.to_thread(session.queue.get, True, 0.5)
                 except queue.Empty:
                     continue
-                await websocket.send_json(event)
+                try:
+                    await websocket.send_json(event)
+                except TypeError:
+                    # A single unserializable event must not kill the stream.
+                    await websocket.send_json(
+                        {"type": "Error", "error": "Unserializable agent event"}
+                    )
                 if event.get("type") == "Done":
                     break
     except WebSocketDisconnect:
         return
+    except Exception as exc:  # noqa: BLE001 - report instead of dropping the socket
+        try:
+            await websocket.send_json({"type": "Error", "error": f"server error: {exc}"})
+        except Exception:  # noqa: BLE001 - client already gone
+            pass
 
 
 # --------------------------------------------------------------------------
