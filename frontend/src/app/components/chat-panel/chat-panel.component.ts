@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../services/chat.service';
+import { I18nService } from '../../i18n/i18n.service';
 import { MarkdownPipe } from '../../pipes/markdown.pipe';
 import { ToolViewComponent } from '../tool-view/tool-view.component';
 
@@ -20,23 +21,25 @@ import { ToolViewComponent } from '../tool-view/tool-view.component';
     <section class="chat">
       <header>
         <div>
-          <h2>Agent chat</h2>
-          <p class="hint">Ask for opportunities, analysis, or place an order.</p>
+          <h2>{{ i18n.t('chat.title') }}</h2>
+          <p class="hint">{{ i18n.t('chat.hint') }}</p>
         </div>
-        <span class="status" [class.open]="chat.status() === 'open'">{{ chat.status() }}</span>
+        <span class="status" [class.open]="chat.status() === 'open'">
+          {{ i18n.t('chat.status.' + chat.status()) }}
+        </span>
       </header>
 
       <div class="messages" #scroller>
         @if (chat.messages().length === 0) {
           <div class="suggestions">
-            <button type="button" (click)="use('Find the best crypto opportunity right now')">
-              Find the best opportunity
+            <button type="button" (click)="use(i18n.t('chat.suggestion.find'))">
+              {{ i18n.t('chat.findOpportunity') }}
             </button>
-            <button type="button" (click)="use('Analyze BTCUSDT on the 1h timeframe')">
-              Analyze BTCUSDT
+            <button type="button" (click)="use(i18n.t('chat.suggestion.analyze'))">
+              {{ i18n.t('chat.analyze') }}
             </button>
-            <button type="button" (click)="use('Show my wallet balances')">
-              Show balances
+            <button type="button" (click)="use(i18n.t('chat.suggestion.balances'))">
+              {{ i18n.t('chat.balances') }}
             </button>
           </div>
         }
@@ -46,16 +49,16 @@ import { ToolViewComponent } from '../tool-view/tool-view.component';
               <span class="who">{{ label(message.role) }}</span>
             </div>
             @if (message.role === 'assistant') {
-              <div class="markdown" [innerHTML]="message.text | markdown"></div>
+              <div class="markdown" dir="auto" [innerHTML]="message.text | markdown"></div>
             } @else if (message.role === 'tool') {
               <app-tool-view [message]="message" />
             } @else {
-              <pre>{{ message.text }}</pre>
+              <pre dir="auto">{{ message.text }}</pre>
             }
           </article>
         }
         @if (chat.running()) {
-          <p class="thinking">Nobi is working…</p>
+          <p class="thinking">{{ i18n.t('chat.thinking') }}</p>
         }
       </div>
 
@@ -64,10 +67,13 @@ import { ToolViewComponent } from '../tool-view/tool-view.component';
           [(ngModel)]="draft"
           name="draft"
           rows="2"
-          placeholder="e.g. Buy 0.001 BTCUSDT at market if the 1h signal is BUY"
+          dir="auto"
+          [placeholder]="i18n.t('chat.placeholder')"
           (keydown.enter)="onEnter($event)"
         ></textarea>
-        <button type="submit" [disabled]="chat.running() || !draft().trim()">Send</button>
+        <button type="submit" [disabled]="chat.running() || !draft().trim()">
+          {{ i18n.t('chat.send') }}
+        </button>
       </form>
     </section>
   `,
@@ -77,13 +83,15 @@ import { ToolViewComponent } from '../tool-view/tool-view.component';
         display: flex;
         flex-direction: column;
         height: 100%;
-        min-height: 420px;
+        min-height: 0;
+        width: 100%;
       }
       header {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
         gap: 8px;
+        flex-shrink: 0;
       }
       h2 {
         margin: 0;
@@ -109,12 +117,13 @@ import { ToolViewComponent } from '../tool-view/tool-view.component';
       }
       .messages {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         margin: 10px 0;
         display: flex;
         flex-direction: column;
         gap: 8px;
-        padding-right: 4px;
+        padding-inline-end: 4px;
       }
       .suggestions {
         display: flex;
@@ -190,6 +199,10 @@ import { ToolViewComponent } from '../tool-view/tool-view.component';
         display: flex;
         gap: 8px;
         align-items: flex-end;
+        flex-shrink: 0;
+        padding-top: 8px;
+        border-top: 1px solid #1e293b;
+        background: #0d1524;
       }
       textarea {
         flex: 1;
@@ -225,6 +238,7 @@ import { ToolViewComponent } from '../tool-view/tool-view.component';
 })
 export class ChatPanelComponent {
   readonly chat = inject(ChatService);
+  readonly i18n = inject(I18nService);
   readonly draft = signal('');
   private readonly scroller = viewChild<ElementRef<HTMLDivElement>>('scroller');
 
@@ -244,15 +258,15 @@ export class ChatPanelComponent {
   label(role: string): string {
     switch (role) {
       case 'user':
-        return 'You';
+        return this.i18n.t('chat.you');
       case 'assistant':
-        return 'Nobi';
+        return this.i18n.t('chat.nobi');
       case 'tool':
-        return 'Tool';
+        return this.i18n.t('chat.tool');
       case 'error':
-        return 'Error';
+        return this.i18n.t('chat.error');
       default:
-        return 'System';
+        return this.i18n.t('chat.system');
     }
   }
 

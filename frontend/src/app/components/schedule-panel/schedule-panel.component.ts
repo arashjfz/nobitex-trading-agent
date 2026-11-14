@@ -1,40 +1,43 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CronPreview, ScheduledTask } from '../../models';
+import { I18nService } from '../../i18n/i18n.service';
+import { LocalDatePipe } from '../../pipes/local-date.pipe';
 import { ApiService } from '../../services/api.service';
 
 @Component({
   selector: 'app-schedule-panel',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, LocalDatePipe],
   template: `
     <section class="scheduler">
       <header>
-        <h2>Schedule</h2>
+        <h2>{{ i18n.t('schedule.title') }}</h2>
         <span class="tz">{{ timezone() }}</span>
       </header>
 
       <div class="form">
         <label>
-          Name (optional)
-          <input [(ngModel)]="name" name="name" placeholder="Morning scan" />
+          {{ i18n.t('schedule.name') }}
+          <input [(ngModel)]="name" name="name" [placeholder]="i18n.t('schedule.namePlaceholder')" />
         </label>
 
         <label>
-          Prompt
+          {{ i18n.t('schedule.prompt') }}
           <textarea
             [(ngModel)]="prompt"
             name="prompt"
             rows="3"
-            placeholder="Find the best opportunities and buy or sell up to 50 dollars."
+            dir="auto"
+            [placeholder]="i18n.t('schedule.promptPlaceholder')"
           ></textarea>
         </label>
 
         <label>
-          Cron
+          {{ i18n.t('schedule.cron') }}
           <input
             [(ngModel)]="cron"
             name="cron"
+            dir="ltr"
             (ngModelChange)="onCronChange($event)"
             placeholder="0 9 * * *"
           />
@@ -49,9 +52,9 @@ import { ApiService } from '../../services/api.service';
         @if (preview(); as p) {
           @if (p.valid) {
             <p class="hint">
-              Next:
+              {{ i18n.t('schedule.next') }}
               @for (run of p.next_runs; track run) {
-                <span>{{ run | date: 'short' }}</span>
+                <span>{{ run | localDate: i18n.locale() }}</span>
               }
             </p>
           } @else {
@@ -65,7 +68,7 @@ import { ApiService } from '../../services/api.service';
           (click)="create()"
           [disabled]="saving() || !prompt.trim() || !cron.trim()"
         >
-          {{ saving() ? 'Scheduling…' : 'Schedule task' }}
+          {{ saving() ? i18n.t('schedule.scheduling') : i18n.t('schedule.create') }}
         </button>
 
         @if (error()) {
@@ -75,34 +78,42 @@ import { ApiService } from '../../services/api.service';
 
       <div class="tasks">
         @if (tasks().length === 0) {
-          <p class="empty">No scheduled tasks yet.</p>
+          <p class="empty">{{ i18n.t('schedule.empty') }}</p>
         }
         @for (task of tasks(); track task.id) {
           <article class="task" [class.off]="!task.enabled">
             <div class="row">
               <strong>{{ task.name }}</strong>
-              <code>{{ task.cron }}</code>
+              <code dir="ltr">{{ task.cron }}</code>
             </div>
-            <p class="prompt">{{ task.prompt }}</p>
+            <p class="prompt" dir="auto">{{ task.prompt }}</p>
             <p class="meta">
-              next {{ task.next_run ? (task.next_run | date: 'short') : 'paused' }}
-              · runs {{ task.run_count }}
+              {{
+                i18n.t('schedule.nextRun', {
+                  value: task.next_run
+                    ? (task.next_run | localDate: i18n.locale())
+                    : i18n.t('schedule.paused')
+                })
+              }}
+              · {{ i18n.t('schedule.runs', { count: task.run_count }) }}
               @if (task.last_status) {
-                · last {{ task.last_status }}
+                · {{ i18n.t('schedule.last', { status: task.last_status }) }}
               }
             </p>
             @if (task.last_result) {
               <details>
-                <summary>Last result</summary>
-                <pre>{{ task.last_result }}</pre>
+                <summary>{{ i18n.t('schedule.lastResult') }}</summary>
+                <pre dir="auto">{{ task.last_result }}</pre>
               </details>
             }
             <div class="actions">
               <button type="button" (click)="toggle(task)">
-                {{ task.enabled ? 'Pause' : 'Resume' }}
+                {{ task.enabled ? i18n.t('schedule.pause') : i18n.t('schedule.resume') }}
               </button>
-              <button type="button" (click)="runNow(task)">Run now</button>
-              <button type="button" class="danger" (click)="remove(task)">Delete</button>
+              <button type="button" (click)="runNow(task)">{{ i18n.t('schedule.runNow') }}</button>
+              <button type="button" class="danger" (click)="remove(task)">
+                {{ i18n.t('schedule.delete') }}
+              </button>
             </div>
           </article>
         }
@@ -284,6 +295,7 @@ import { ApiService } from '../../services/api.service';
 })
 export class SchedulePanelComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
+  readonly i18n = inject(I18nService);
 
   readonly tasks = signal<ScheduledTask[]>([]);
   readonly timezone = signal('');
@@ -295,13 +307,15 @@ export class SchedulePanelComponent implements OnInit, OnDestroy {
   prompt = '';
   cron = '0 9 * * *';
 
-  readonly presets = [
-    { label: 'Every 15 min', cron: '*/15 * * * *' },
-    { label: 'Hourly', cron: '0 * * * *' },
-    { label: 'Daily 09:00', cron: '0 9 * * *' },
-    { label: 'Weekdays 09:00', cron: '0 9 * * 1-5' },
-    { label: 'Weekly Mon 09:00', cron: '0 9 * * 1' },
-  ];
+  get presets(): { label: string; cron: string }[] {
+    return [
+      { label: this.i18n.t('schedule.preset.15'), cron: '*/15 * * * *' },
+      { label: this.i18n.t('schedule.preset.hourly'), cron: '0 * * * *' },
+      { label: this.i18n.t('schedule.preset.daily'), cron: '0 9 * * *' },
+      { label: this.i18n.t('schedule.preset.weekdays'), cron: '0 9 * * 1-5' },
+      { label: this.i18n.t('schedule.preset.weekly'), cron: '0 9 * * 1' },
+    ];
+  }
 
   private refreshTimer?: ReturnType<typeof setInterval>;
   private cronTimer?: ReturnType<typeof setTimeout>;
@@ -365,7 +379,7 @@ export class SchedulePanelComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.saving.set(false);
-          this.error.set(err?.error?.detail ?? 'Could not create the task');
+          this.error.set(err?.error?.detail ?? this.i18n.t('schedule.error.create'));
         },
       });
   }
@@ -373,21 +387,21 @@ export class SchedulePanelComponent implements OnInit, OnDestroy {
   toggle(task: ScheduledTask): void {
     this.api.updateSchedule(task.id, { enabled: !task.enabled }).subscribe({
       next: () => this.load(),
-      error: (err) => this.error.set(err?.error?.detail ?? 'Could not update the task'),
+      error: (err) => this.error.set(err?.error?.detail ?? this.i18n.t('schedule.error.update')),
     });
   }
 
   runNow(task: ScheduledTask): void {
     this.api.runSchedule(task.id).subscribe({
       next: () => setTimeout(() => this.load(), 1500),
-      error: (err) => this.error.set(err?.error?.detail ?? 'Could not start the task'),
+      error: (err) => this.error.set(err?.error?.detail ?? this.i18n.t('schedule.error.start')),
     });
   }
 
   remove(task: ScheduledTask): void {
     this.api.deleteSchedule(task.id).subscribe({
       next: () => this.load(),
-      error: (err) => this.error.set(err?.error?.detail ?? 'Could not delete the task'),
+      error: (err) => this.error.set(err?.error?.detail ?? this.i18n.t('schedule.error.delete')),
     });
   }
 }

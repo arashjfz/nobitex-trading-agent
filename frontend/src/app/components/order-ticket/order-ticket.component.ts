@@ -1,6 +1,7 @@
 import { Component, inject, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Market } from '../../models';
+import { I18nService } from '../../i18n/i18n.service';
 import { ApiService } from '../../services/api.service';
 
 @Component({
@@ -9,23 +10,27 @@ import { ApiService } from '../../services/api.service';
   template: `
     <section class="ticket">
       <header>
-        <h2>Order ticket</h2>
+        <h2>{{ i18n.t('order.title') }}</h2>
         @if (dryRun()) {
-          <span class="paper">PAPER — no real order</span>
+          <span class="paper">{{ i18n.t('order.paper') }}</span>
         } @else {
-          <span class="live">LIVE</span>
+          <span class="live">{{ i18n.t('order.live') }}</span>
         }
       </header>
 
       <div class="side">
-        <button type="button" [class.active]="side === 'buy'" (click)="side = 'buy'">Buy</button>
-        <button type="button" [class.active]="side === 'sell'" (click)="side = 'sell'">Sell</button>
+        <button type="button" [class.active]="side === 'buy'" (click)="side = 'buy'">
+          {{ i18n.t('order.buy') }}
+        </button>
+        <button type="button" [class.active]="side === 'sell'" (click)="side = 'sell'">
+          {{ i18n.t('order.sell') }}
+        </button>
       </div>
 
       <label>
-        Market
-        <select [(ngModel)]="market" name="market">
-          <option value="">Same as chart ({{ symbol() }})</option>
+        {{ i18n.t('order.market') }}
+        <select [(ngModel)]="market" name="market" dir="ltr">
+          <option value="">{{ i18n.t('order.sameAsChart', { symbol: symbol() }) }}</option>
           @for (m of markets(); track m.symbol) {
             <option [value]="m.symbol">{{ m.symbol }}</option>
           }
@@ -33,27 +38,33 @@ import { ApiService } from '../../services/api.service';
       </label>
 
       <label>
-        Amount (base currency)
-        <input [(ngModel)]="amount" name="amount" placeholder="0.001" />
+        {{ i18n.t('order.amount') }}
+        <input [(ngModel)]="amount" name="amount" placeholder="0.001" dir="ltr" />
       </label>
 
       <label>
-        Execution
+        {{ i18n.t('order.execution') }}
         <select [(ngModel)]="execution" name="execution">
-          <option value="limit">limit</option>
-          <option value="market">market</option>
+          <option value="limit">{{ i18n.t('order.limit') }}</option>
+          <option value="market">{{ i18n.t('order.marketExec') }}</option>
         </select>
       </label>
 
       @if (execution === 'limit') {
         <label>
-          Limit price
-          <input [(ngModel)]="price" name="price" placeholder="60000" />
+          {{ i18n.t('order.limitPrice') }}
+          <input [(ngModel)]="price" name="price" placeholder="60000" dir="ltr" />
         </label>
       }
 
       <button class="submit" type="button" [disabled]="loading" (click)="submit()">
-        {{ loading ? 'Placing…' : side === 'buy' ? 'Place buy order' : 'Place sell order' }}
+        {{
+          loading
+            ? i18n.t('order.placing')
+            : side === 'buy'
+              ? i18n.t('order.placeBuy')
+              : i18n.t('order.placeSell')
+        }}
       </button>
 
       @if (error) {
@@ -183,6 +194,7 @@ export class OrderTicketComponent {
   readonly dryRun = input(false);
 
   private readonly api = inject(ApiService);
+  readonly i18n = inject(I18nService);
 
   side: 'buy' | 'sell' = 'buy';
   market = '';

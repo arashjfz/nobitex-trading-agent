@@ -3,21 +3,34 @@
     <span class="logo">◈</span>
     <div>
       <h1>Nobi</h1>
-      <p>Nobitex trading agent · OpenHands Agent SDK</p>
+      <p>{{ i18n.t('app.tagline') }}</p>
     </div>
   </div>
   <div class="badges">
+    <label class="lang">
+      <span class="sr-only">{{ i18n.t('lang.label') }}</span>
+      <select
+        [ngModel]="i18n.locale()"
+        (ngModelChange)="i18n.setLocale($event)"
+        name="locale"
+        [attr.aria-label]="i18n.t('lang.label')"
+      >
+        @for (option of i18n.locales; track option.code) {
+          <option [value]="option.code">{{ option.label }}</option>
+        }
+      </select>
+    </label>
     @if (health(); as h) {
       <span class="badge">{{ h.nobitex.environment }}</span>
       <span class="badge" [class.paper]="h.nobitex.dry_run" [class.live]="!h.nobitex.dry_run">
-        {{ h.nobitex.dry_run ? 'PAPER' : 'LIVE' }}
+        {{ h.nobitex.dry_run ? i18n.t('badge.paper') : i18n.t('badge.live') }}
       </span>
       @if (h.nobitex.read_only) {
-        <span class="badge">READ-ONLY</span>
+        <span class="badge">{{ i18n.t('badge.readOnly') }}</span>
       }
       <span class="badge model">{{ h.llm.model }}</span>
     } @else {
-      <span class="badge">connecting…</span>
+      <span class="badge">{{ i18n.t('badge.connecting') }}</span>
     }
   </div>
 </header>
@@ -26,7 +39,7 @@
   <section class="card left">
     <div class="toolbar">
       <label>
-        Market
+        {{ i18n.t('market') }}
         <select
           [ngModel]="symbol()"
           (ngModelChange)="onMarketSelected($event)"
@@ -41,7 +54,7 @@
         </select>
       </label>
       <label>
-        Timeframe
+        {{ i18n.t('timeframe') }}
         <select [value]="resolution()" (change)="onResolutionChange($event)">
           @for (option of resolutions; track option.value) {
             <option [value]="option.value">{{ option.label }}</option>
@@ -49,10 +62,10 @@
         </select>
       </label>
       <button type="button" (click)="analyze()" [disabled]="loading()">
-        {{ loading() ? 'Analyzing…' : 'Analyze' }}
+        {{ loading() ? i18n.t('analyzing') : i18n.t('analyze') }}
       </button>
       <button type="button" class="ghost" (click)="scanMarket()" [disabled]="scanning()">
-        {{ scanning() ? 'Scanning…' : 'Scan market' }}
+        {{ scanning() ? i18n.t('scanning') : i18n.t('scanMarket') }}
       </button>
     </div>
 
@@ -64,42 +77,42 @@
       <div class="price-row">
         <div class="ident">
           <h2>{{ a.symbol }}</h2>
-          <p class="sub">{{ a.resolution }}m · {{ time(a.as_of) }}</p>
+          <p class="sub">{{ resolutionLabel(a.resolution) }} · {{ time(a.as_of) }}</p>
         </div>
         <div class="price">{{ fmt(a.last_price) }}</div>
         <span class="signal" [class]="signalClass(a.signal)">{{ a.signal }}</span>
-        <span class="conf">confidence {{ pct(a.confidence) }}</span>
+        <span class="conf">{{ i18n.t('confidence') }} {{ pct(a.confidence) }}</span>
       </div>
 
       <app-candle-chart [candles]="a.candles" />
 
       <div class="grid2">
         <div class="panel">
-          <h3>Indicators</h3>
+          <h3>{{ i18n.t('indicators') }}</h3>
           <dl>
             @for (row of indicatorRows; track row.key) {
               <div>
-                <dt>{{ row.label }}</dt>
+                <dt>{{ i18n.t('indicator.' + row.key, undefined, row.label) }}</dt>
                 <dd>{{ fmt(a.indicators[row.key], row.digits) }}</dd>
               </div>
             }
           </dl>
         </div>
         <div class="panel">
-          <h3>Trade plan</h3>
+          <h3>{{ i18n.t('tradePlan') }}</h3>
           <dl>
-            <div><dt>Entry</dt><dd>{{ fmt(a.levels.entry) }}</dd></div>
-            <div><dt>Stop-loss</dt><dd class="down">{{ fmt(a.levels.stop_loss) }}</dd></div>
-            <div><dt>Take-profit</dt><dd class="up">{{ fmt(a.levels.take_profit) }}</dd></div>
-            <div><dt>Risk / reward</dt><dd>1 : {{ a.levels.risk_reward }}</dd></div>
-            <div><dt>Support</dt><dd>{{ fmt(a.levels.support) }}</dd></div>
-            <div><dt>Resistance</dt><dd>{{ fmt(a.levels.resistance) }}</dd></div>
+            <div><dt>{{ i18n.t('entry') }}</dt><dd>{{ fmt(a.levels.entry) }}</dd></div>
+            <div><dt>{{ i18n.t('stopLoss') }}</dt><dd class="down">{{ fmt(a.levels.stop_loss) }}</dd></div>
+            <div><dt>{{ i18n.t('takeProfit') }}</dt><dd class="up">{{ fmt(a.levels.take_profit) }}</dd></div>
+            <div><dt>{{ i18n.t('riskReward') }}</dt><dd>1 : {{ a.levels.risk_reward }}</dd></div>
+            <div><dt>{{ i18n.t('support') }}</dt><dd>{{ fmt(a.levels.support) }}</dd></div>
+            <div><dt>{{ i18n.t('resistance') }}</dt><dd>{{ fmt(a.levels.resistance) }}</dd></div>
           </dl>
         </div>
       </div>
 
       <div class="panel">
-        <h3>Why this signal</h3>
+        <h3>{{ i18n.t('whySignal') }}</h3>
         <ul class="reasons">
           @for (reason of a.reasons; track $index) {
             <li>{{ reason }}</li>
@@ -107,22 +120,26 @@
         </ul>
       </div>
     } @else if (!loading()) {
-      <p class="empty">Run an analysis to see signals.</p>
+      <p class="empty">{{ i18n.t('empty.analysis') }}</p>
     }
   </section>
 
   <aside class="card right">
     <nav class="tabs">
-      <button type="button" [class.active]="tab() === 'chat'" (click)="tab.set('chat')">Chat</button>
-      <button type="button" [class.active]="tab() === 'order'" (click)="tab.set('order')">Order</button>
+      <button type="button" [class.active]="tab() === 'chat'" (click)="tab.set('chat')">
+        {{ i18n.t('tabs.chat') }}
+      </button>
+      <button type="button" [class.active]="tab() === 'order'" (click)="tab.set('order')">
+        {{ i18n.t('tabs.order') }}
+      </button>
       <button type="button" [class.active]="tab() === 'scan'" (click)="tab.set('scan')">
-        Opportunities
+        {{ i18n.t('tabs.opportunities') }}
       </button>
       <button type="button" [class.active]="tab() === 'schedule'" (click)="tab.set('schedule')">
-        Schedule
+        {{ i18n.t('tabs.schedule') }}
       </button>
       <button type="button" [class.active]="tab() === 'settings'" (click)="tab.set('settings')">
-        Settings
+        {{ i18n.t('tabs.settings') }}
       </button>
     </nav>
 
@@ -146,16 +163,16 @@
       @case ('scan') {
         @if (scan(); as s) {
           @if (s.opportunities.length === 0) {
-            <p class="empty">No opportunities returned.</p>
+            <p class="empty">{{ i18n.t('empty.opportunities') }}</p>
           } @else {
             <table class="scan">
               <thead>
                 <tr>
-                  <th>Market</th>
-                  <th>Signal</th>
-                  <th>Score</th>
-                  <th>Conf.</th>
-                  <th>Price</th>
+                  <th>{{ i18n.t('scan.market') }}</th>
+                  <th>{{ i18n.t('scan.signal') }}</th>
+                  <th>{{ i18n.t('scan.score') }}</th>
+                  <th>{{ i18n.t('scan.conf') }}</th>
+                  <th>{{ i18n.t('scan.price') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,7 +190,7 @@
           }
           @if (s.errors.length > 0) {
             <div class="panel errors">
-              <h3>{{ s.errors.length }} market(s) failed</h3>
+              <h3>{{ i18n.t('scan.failed', { count: s.errors.length }) }}</h3>
               <ul>
                 @for (item of s.errors; track item.symbol) {
                   <li>{{ item.symbol }}: {{ item.error }}</li>
@@ -182,7 +199,7 @@
             </div>
           }
         } @else {
-          <p class="empty">Click “Scan market” to rank opportunities.</p>
+          <p class="empty">{{ i18n.t('empty.scanHint') }}</p>
         }
       }
     }
@@ -190,6 +207,5 @@
 </main>
 
 <footer class="disclaimer">
-  Crypto trading carries substantial risk. This assistant is not a financial advisor and
-  paper mode is on by default. You are responsible for every order.
+  {{ i18n.t('footer.disclaimer') }}
 </footer>

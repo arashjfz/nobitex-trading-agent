@@ -16,6 +16,22 @@ from .config import Settings
 
 _EVENT_TYPES = (MessageEvent, ActionEvent, ObservationEvent, AgentErrorEvent)
 
+_LANGUAGE_NAMES = {
+    "en": "English",
+    "fa": "Persian (Farsi)",
+    "ar": "Arabic",
+    "de": "German",
+}
+
+
+def _with_language(message: str, language: str | None) -> str:
+    name = _LANGUAGE_NAMES.get(language or "")
+    if not name:
+        return message
+    return (
+        f"[Reply in {name}. Keep tool names, tickers, prices and numbers unchanged.]\n\n{message}"
+    )
+
 
 def _blocks_text(blocks: Any) -> str:
     """Flatten SDK content blocks (TextContent, Message, str) into plain text."""
@@ -156,12 +172,14 @@ class AgentSession:
         self.history.append(payload)
         self.queue.put(payload)
 
-    def send(self, message: str) -> None:
+    def send(self, message: str, language: str | None = None) -> None:
         with self._lock:
             if self.status == "running":
                 raise RuntimeError("This session is already processing a message")
             self.status = "running"
-        thread = threading.Thread(target=self._run, args=(message,), daemon=True)
+        thread = threading.Thread(
+            target=self._run, args=(_with_language(message, language),), daemon=True
+        )
         thread.start()
 
     def _run(self, message: str) -> None:

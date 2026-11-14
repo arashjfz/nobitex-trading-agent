@@ -1,11 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ChatEvent, ChatMessage } from '../models';
+import { I18nService } from '../i18n/i18n.service';
 import { ApiService } from './api.service';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private readonly api = inject(ApiService);
+  private readonly i18n = inject(I18nService);
 
   readonly messages = signal<ChatMessage[]>([]);
   readonly status = signal<'idle' | 'connecting' | 'open' | 'closed'>('idle');
@@ -33,7 +35,7 @@ export class ChatService {
         sessionId = null;
       }
       if (!sessionId) {
-        this.push('error', 'Could not create a chat session. Is the backend running?');
+        this.push('error', this.i18n.t('chat.error.session'));
         this.status.set('closed');
         this.scheduleReconnect();
         return;
@@ -58,20 +60,20 @@ export class ChatService {
       this.status.set('closed');
       if (this.running()) {
         this.running.set(false);
-        this.push('error', 'Connection closed before the agent finished. Reconnecting…');
+        this.push('error', this.i18n.t('chat.error.closed'));
       }
       this.scheduleReconnect();
     };
     socket.onerror = () => {
       if (this.status() !== 'closed') {
-        this.push('error', 'WebSocket connection error.');
+        this.push('error', this.i18n.t('chat.error.socket'));
       }
     };
     socket.onmessage = (message) => {
       try {
         this.handle(JSON.parse(message.data) as ChatEvent);
       } catch {
-        this.push('error', 'Received an unreadable event from the server.');
+        this.push('error', this.i18n.t('chat.error.unreadable'));
       }
     };
   }
@@ -94,12 +96,12 @@ export class ChatService {
       return false;
     }
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      this.push('error', 'Chat is not connected yet. Please wait a moment and retry.');
+      this.push('error', this.i18n.t('chat.error.notConnected'));
       return false;
     }
     this.push('user', trimmed);
     this.running.set(true);
-    this.socket.send(JSON.stringify({ message: trimmed }));
+    this.socket.send(JSON.stringify({ message: trimmed, language: this.i18n.locale() }));
     return true;
   }
 
@@ -148,7 +150,7 @@ export class ChatService {
       }
       case 'AgentErrorEvent':
       case 'Error':
-        this.push('error', event.error ?? 'The agent reported an error.');
+        this.push('error', event.error ?? this.i18n.t('chat.error.agent'));
         this.running.set(false);
         break;
       case 'Done':

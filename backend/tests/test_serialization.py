@@ -7,7 +7,7 @@ import json
 from openhands.sdk.event import ObservationEvent
 from openhands.sdk.llm.message import TextContent
 
-from app.sessions import _blocks_text, _content_text, _json_safe, serialize_event
+from app.sessions import _blocks_text, _content_text, _json_safe, _with_language, serialize_event
 from app.tools import AnalyzeMarketObservation
 
 
@@ -15,6 +15,13 @@ def test_blocks_text_flattens_text_content() -> None:
     assert _blocks_text([TextContent(text="first"), TextContent(text="second")]) == "first\nsecond"
     assert _blocks_text("plain") == "plain"
     assert _blocks_text(None) == ""
+
+
+def test_with_language_prefixes_supported_locales() -> None:
+    assert _with_language("analyze BTC", "fa").startswith("[Reply in Persian (Farsi).")
+    assert _with_language("analyze BTC", "de").endswith("analyze BTC")
+    assert _with_language("analyze BTC", None) == "analyze BTC"
+    assert _with_language("analyze BTC", "xx") == "analyze BTC"
 
 
 def test_json_safe_serializes_text_content() -> None:

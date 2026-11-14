@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { ChatMessage } from '../../models';
+import { I18nService } from '../../i18n/i18n.service';
 
 interface Level {
   price: number;
@@ -111,17 +112,17 @@ type View =
       </div>
       @if (message().text) {
         <details class="reason">
-          <summary>reasoning</summary>
-          <p>{{ message().text }}</p>
+          <summary>{{ i18n.t('tool.reasoning') }}</summary>
+          <p dir="auto">{{ message().text }}</p>
         </details>
       }
     } @else {
       <header class="tool-head">
         <span class="tool-name">{{ name() }}</span>
         @if (message().failed) {
-          <span class="badge err">error</span>
+          <span class="badge err">{{ i18n.t('tool.error') }}</span>
         } @else {
-          <span class="badge ok">result</span>
+          <span class="badge ok">{{ i18n.t('tool.result') }}</span>
         }
       </header>
 
@@ -129,18 +130,23 @@ type View =
         @case ('orderbook') {
           @if (book(); as b) {
             <div class="book-head">
-              <span>Last <b>{{ num(b.last, 2) }}</b></span>
-              <span>Spread <b>{{ num(b.spread, 2) }}</b> ({{ num(b.spreadPct, 3) }}%)</span>
-              <span>Mid <b>{{ num(b.mid, 2) }}</b></span>
+              <span>{{ i18n.t('tool.last') }} <b>{{ num(b.last, 2) }}</b></span>
+              <span>
+                {{ i18n.t('tool.spread') }} <b>{{ num(b.spread, 2) }}</b>
+                ({{ num(b.spreadPct, 3) }}%)
+              </span>
+              <span>{{ i18n.t('tool.mid') }} <b>{{ num(b.mid, 2) }}</b></span>
               @if (b.updated) {
                 <span class="muted">{{ b.updated }}</span>
               }
             </div>
             <div class="book">
               <div class="book-col">
-                <div class="book-title ask">Asks</div>
+                <div class="book-title ask">{{ i18n.t('tool.asks') }}</div>
                 <div class="book-row head">
-                  <span>Price</span><span>Amount</span><span>Total</span>
+                  <span>{{ i18n.t('tool.price') }}</span>
+                  <span>{{ i18n.t('tool.amount') }}</span>
+                  <span>{{ i18n.t('tool.total') }}</span>
                 </div>
                 @for (level of b.asks; track $index) {
                   <div class="book-row">
@@ -152,9 +158,11 @@ type View =
                 }
               </div>
               <div class="book-col">
-                <div class="book-title bid">Bids</div>
+                <div class="book-title bid">{{ i18n.t('tool.bids') }}</div>
                 <div class="book-row head">
-                  <span>Price</span><span>Amount</span><span>Total</span>
+                  <span>{{ i18n.t('tool.price') }}</span>
+                  <span>{{ i18n.t('tool.amount') }}</span>
+                  <span>{{ i18n.t('tool.total') }}</span>
                 </div>
                 @for (level of b.bids; track $index) {
                   <div class="book-row">
@@ -177,11 +185,16 @@ type View =
               <div class="signal" [class]="'signal ' + a.signal.toLowerCase()">
                 <span class="signal-name">{{ a.signal }}</span>
                 <span class="signal-meta">
-                  score {{ num(a.score, 2) }} · confidence {{ num(a.confidence * 100, 0) }}%
+                  {{
+                    i18n.t('tool.signalScore', {
+                      score: num(a.score, 2),
+                      confidence: num(a.confidence * 100, 0)
+                    })
+                  }}
                 </span>
               </div>
               <div class="price">
-                Last price <b>{{ num(a.last_price, 2) }}</b>
+                {{ i18n.t('tool.lastPrice') }} <b>{{ num(a.last_price, 2) }}</b>
                 <span class="muted">{{ a.symbol }} · {{ resolutionLabel(a.resolution) }}</span>
               </div>
               @if (levelRows().length) {
@@ -194,7 +207,7 @@ type View =
                 </div>
               }
               @if (indicatorRows().length) {
-                <h4>Indicators</h4>
+                <h4>{{ i18n.t('tool.indicators') }}</h4>
                 <div class="kv">
                   @for (row of indicatorRows(); track row.key) {
                     <div class="kv-row"><span>{{ row.label }}</span><b>{{ row.value }}</b></div>
@@ -202,7 +215,7 @@ type View =
                 </div>
               }
               @if (a.reasons?.length) {
-                <h4>Why</h4>
+                <h4>{{ i18n.t('tool.why') }}</h4>
                 <ul class="reasons">
                   @for (reason of a.reasons; track $index) {
                     <li>{{ reason }}</li>
@@ -218,15 +231,31 @@ type View =
         @case ('server') {
           @if (server(); as s) {
             <div class="kv">
-              <div class="kv-row"><span>Environment</span><b>{{ s.environment ?? '—' }}</b></div>
-              <div class="kv-row"><span>Base URL</span><b>{{ s.base_url ?? '—' }}</b></div>
-              <div class="kv-row"><span>Credentials</span><b>{{ s.has_credentials ? 'configured' : 'none' }}</b></div>
-              <div class="kv-row"><span>Auth mode</span><b>{{ s.auth_mode || 'auto' }}</b></div>
-              <div class="kv-row"><span>Read-only</span><b>{{ s.read_only ? 'yes' : 'no' }}</b></div>
-              <div class="kv-row"><span>Dry run</span><b>{{ s.dry_run ? 'yes (paper)' : 'no (live)' }}</b></div>
+              <div class="kv-row">
+                <span>{{ i18n.t('tool.environment') }}</span><b>{{ s.environment ?? '—' }}</b>
+              </div>
+              <div class="kv-row">
+                <span>{{ i18n.t('tool.baseUrl') }}</span><b dir="ltr">{{ s.base_url ?? '—' }}</b>
+              </div>
+              <div class="kv-row">
+                <span>{{ i18n.t('tool.credentials') }}</span>
+                <b>{{ s.has_credentials ? i18n.t('tool.configured') : i18n.t('tool.none') }}</b>
+              </div>
+              <div class="kv-row">
+                <span>{{ i18n.t('tool.authMode') }}</span>
+                <b>{{ s.auth_mode || i18n.t('tool.auto') }}</b>
+              </div>
+              <div class="kv-row">
+                <span>{{ i18n.t('tool.readOnly') }}</span>
+                <b>{{ s.read_only ? i18n.t('tool.yes') : i18n.t('tool.no') }}</b>
+              </div>
+              <div class="kv-row">
+                <span>{{ i18n.t('tool.dryRun') }}</span>
+                <b>{{ s.dry_run ? i18n.t('tool.paperYes') : i18n.t('tool.liveNo') }}</b>
+              </div>
             </div>
             @if (balances().length) {
-              <h4>Paper balances</h4>
+              <h4>{{ i18n.t('tool.paperBalances') }}</h4>
               <div class="chips">
                 @for (balance of balances(); track balance.currency) {
                   <span class="chip">{{ balance.currency }} <b>{{ balance.amount }}</b></span>
@@ -242,7 +271,12 @@ type View =
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Currency</th><th>Balance</th><th>Active</th><th>Blocked</th></tr>
+                <tr>
+                  <th>{{ i18n.t('tool.currency') }}</th>
+                  <th>{{ i18n.t('tool.balance') }}</th>
+                  <th>{{ i18n.t('tool.active') }}</th>
+                  <th>{{ i18n.t('tool.blocked') }}</th>
+                </tr>
               </thead>
               <tbody>
                 @for (wallet of wallets(); track wallet.currency) {
@@ -257,7 +291,7 @@ type View =
             </table>
           </div>
           @if (paper()) {
-            <span class="badge paper">paper</span>
+            <span class="badge paper">{{ i18n.t('tool.paper') }}</span>
           }
         }
 
@@ -266,8 +300,14 @@ type View =
             <table>
               <thead>
                 <tr>
-                  <th>Market</th><th>Last</th><th>24h</th><th>High</th><th>Low</th>
-                  <th>Volume</th><th>Bid</th><th>Ask</th>
+                  <th>{{ i18n.t('tool.market') }}</th>
+                  <th>{{ i18n.t('tool.last') }}</th>
+                  <th>{{ i18n.t('tool.change24h') }}</th>
+                  <th>{{ i18n.t('tool.high') }}</th>
+                  <th>{{ i18n.t('tool.low') }}</th>
+                  <th>{{ i18n.t('tool.volume') }}</th>
+                  <th>{{ i18n.t('tool.bid') }}</th>
+                  <th>{{ i18n.t('tool.ask') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,7 +327,9 @@ type View =
             </table>
           </div>
           @if (statsTotal() > statsView().length) {
-            <p class="muted">Showing {{ statsView().length }} of {{ statsTotal() }} markets.</p>
+            <p class="muted">
+              {{ i18n.t('tool.showing', { shown: statsView().length, total: statsTotal() }) }}
+            </p>
           }
         }
 
@@ -296,8 +338,13 @@ type View =
             <table>
               <thead>
                 <tr>
-                  <th>ID</th><th>Market</th><th>Side</th><th>Price</th><th>Amount</th>
-                  <th>Status</th><th>Time</th>
+                  <th>{{ i18n.t('tool.id') }}</th>
+                  <th>{{ i18n.t('tool.market') }}</th>
+                  <th>{{ i18n.t('tool.side') }}</th>
+                  <th>{{ i18n.t('tool.price') }}</th>
+                  <th>{{ i18n.t('tool.amount') }}</th>
+                  <th>{{ i18n.t('tool.status') }}</th>
+                  <th>{{ i18n.t('tool.time') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -321,7 +368,13 @@ type View =
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Time</th><th>Side</th><th>Price</th><th>Amount</th><th>Total</th></tr>
+                <tr>
+                  <th>{{ i18n.t('tool.time') }}</th>
+                  <th>{{ i18n.t('tool.side') }}</th>
+                  <th>{{ i18n.t('tool.price') }}</th>
+                  <th>{{ i18n.t('tool.amount') }}</th>
+                  <th>{{ i18n.t('tool.total') }}</th>
+                </tr>
               </thead>
               <tbody>
                 @for (row of trades(); track $index) {
@@ -382,12 +435,12 @@ type View =
             </div>
           }
           @if (!generic().scalars.length && !generic().nested.length && !generic().arrays.length) {
-            <pre class="raw">{{ generic().text || message().text || '(empty result)' }}</pre>
+            <pre class="raw">{{ generic().text || message().text || i18n.t('tool.empty') }}</pre>
           }
         }
 
         @default {
-          <pre class="raw">{{ message().text || '(empty result)' }}</pre>
+          <pre class="raw">{{ message().text || i18n.t('tool.empty') }}</pre>
         }
       }
     }
@@ -518,7 +571,9 @@ type View =
       }
       .bar {
         position: absolute;
-        inset: 0 auto 0 0;
+        inset-block: 0;
+        inset-inline-start: 0;
+        inset-inline-end: auto;
         z-index: 0;
         border-radius: 2px;
         opacity: 0.18;
@@ -698,6 +753,7 @@ type View =
 })
 export class ToolViewComponent {
   readonly message = input.required<ChatMessage>();
+  readonly i18n = inject(I18nService);
 
   readonly name = computed(() =>
     (this.message().tool ?? 'tool').replace(/^nobitex_nobitex_/, '').replace(/^nobitex_/, ''),
@@ -829,7 +885,7 @@ export class ToolViewComponent {
       .filter(([, value]) => value !== null && value !== undefined)
       .map(([key, value]) => ({
         key,
-        label: labels[key] ?? this.label(key),
+        label: this.i18n.t('level.' + key, undefined, labels[key] ?? this.label(key)),
         value: this.num(value, 2),
       }));
   });
@@ -860,7 +916,7 @@ export class ToolViewComponent {
       .filter(([, value]) => value !== null && value !== undefined)
       .map(([key, value]) => ({
         key,
-        label: labels[key] ?? this.label(key),
+        label: this.i18n.t('indicator.' + key, undefined, labels[key] ?? this.label(key)),
         value: this.num(value, 4),
       }));
   });
@@ -981,7 +1037,12 @@ export class ToolViewComponent {
       scalars.push({ key, value: this.scalar(value) });
     }
     const empty = !scalars.length && !nested.length && !arrays.length;
-    return { scalars, nested, arrays, text: empty ? 'No records.' : this.message().text };
+    return {
+      scalars,
+      nested,
+      arrays,
+      text: empty ? this.i18n.t('tool.noRecords') : this.message().text,
+    };
   });
 
   num(value: unknown, digits = 2): string {
@@ -993,30 +1054,9 @@ export class ToolViewComponent {
   }
 
   label(key: string): string {
-    const known: Record<string, string> = {
-      lastTradePrice: 'Last trade price',
-      bestBuy: 'Best bid',
-      bestSell: 'Best ask',
-      dayChange: '24h change',
-      volumeDst: 'Volume (quote)',
-      volumeSrc: 'Volume (base)',
-      dayHigh: '24h high',
-      dayLow: '24h low',
-      base_url: 'Base URL',
-      is_testnet: 'Testnet',
-      has_credentials: 'Credentials',
-      auth_mode: 'Auth mode',
-      read_only: 'Read-only',
-      dry_run: 'Dry run',
-      paper_balances: 'Paper balances',
-      activeBalance: 'Active',
-      blockedBalance: 'Blocked',
-      srcCurrency: 'Source',
-      dstCurrency: 'Destination',
-      clientOrderId: 'Client order ID',
-    };
-    if (known[key]) {
-      return known[key];
+    const translated = this.i18n.t('field.' + key, undefined, '');
+    if (translated) {
+      return translated;
     }
     return key
       .replace(/([a-z])([A-Z])/g, '$1 $2')

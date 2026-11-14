@@ -199,7 +199,7 @@ def get_session(session_id: str) -> dict[str, Any]:
 def chat(request: ChatRequest) -> dict[str, Any]:
     session = manager.get_or_create(request.session_id)
     try:
-        session.send(request.message)
+        session.send(request.message, request.language)
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"session_id": session.id, "status": "running"}
@@ -225,8 +225,9 @@ async def chat_socket(websocket: WebSocket, session_id: str) -> None:
             message = str((data or {}).get("message", "")).strip()
             if not message:
                 continue
+            language = str((data or {}).get("language", "")).strip() or None
             try:
-                session.send(message)
+                session.send(message, language)
             except RuntimeError as exc:
                 await websocket.send_json({"type": "Error", "error": str(exc)})
                 continue

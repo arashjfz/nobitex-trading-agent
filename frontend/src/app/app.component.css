@@ -76,6 +76,33 @@ h1 {
   color: #a5b4fc;
 }
 
+.lang select {
+  background: #0b1220;
+  border: 1px solid #1e293b;
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.lang select:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(340px, 1fr);
@@ -100,8 +127,11 @@ h1 {
 
 .right {
   min-height: 640px;
+  height: calc(100vh - 120px);
+  max-height: calc(100vh - 120px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .toolbar {
@@ -186,7 +216,7 @@ h1 {
   font-size: 26px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .signal {
@@ -276,7 +306,7 @@ h1 {
 
 .reasons {
   margin: 0;
-  padding-left: 18px;
+  padding-inline-start: 18px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -311,7 +341,13 @@ h1 {
   color: #38bdf8;
 }
 
-.right app-chat-panel,
+.right app-chat-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+}
+
 .right app-order-ticket,
 .right app-schedule-panel,
 .right app-settings-panel {
@@ -327,7 +363,7 @@ h1 {
 }
 
 .scan th {
-  text-align: left;
+  text-align: start;
   padding: 8px 6px;
   color: #64748b;
   font-size: 10px;
@@ -357,7 +393,7 @@ h1 {
 
 .errors ul {
   margin: 0;
-  padding-left: 16px;
+  padding-inline-start: 16px;
   font-size: 11px;
   color: #fca5a5;
 }
@@ -392,5 +428,13 @@ h1 {
   .left,
   .right {
     min-height: auto;
+  }
+  .right {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .right app-chat-panel {
+    min-height: 520px;
   }
 }

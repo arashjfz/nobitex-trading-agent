@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { AppSettings, SettingsUpdate } from '../../models';
+import { I18nService } from '../../i18n/i18n.service';
 import { ApiService } from '../../services/api.service';
 import { ChatService } from '../../services/chat.service';
 
@@ -12,60 +13,75 @@ import { ChatService } from '../../services/chat.service';
     <section class="settings">
       <header>
         <div>
-          <h2>Configuration</h2>
-          <p class="hint">Saved to <code>.env</code>. New chat sessions pick up changes.</p>
+          <h2>{{ i18n.t('settings.title') }}</h2>
+          <p class="hint">{{ i18n.t('settings.hint') }}</p>
         </div>
         <button type="button" class="ghost" (click)="load()" [disabled]="loading || saving">
-          Reload
+          {{ i18n.t('settings.reload') }}
         </button>
       </header>
 
       @if (loading) {
-        <p class="hint">Loading configuration…</p>
+        <p class="hint">{{ i18n.t('settings.loading') }}</p>
       } @else {
         <fieldset>
-          <legend>LLM</legend>
+          <legend>{{ i18n.t('settings.llm') }}</legend>
           <label class="field">
-            <span>Model</span>
-            <input [(ngModel)]="form.llm_model" name="llm_model" placeholder="provider/model" />
-          </label>
-          <label class="field">
-            <span>Base URL</span>
+            <span>{{ i18n.t('settings.model') }}</span>
             <input
-              [(ngModel)]="form.llm_base_url"
-              name="llm_base_url"
-              placeholder="provider default"
+              [(ngModel)]="form.llm_model"
+              name="llm_model"
+              dir="ltr"
+              [placeholder]="i18n.t('settings.providerModel')"
             />
           </label>
           <label class="field">
-            <span>API key {{ flags.api_key_set ? '(stored)' : '(not set)' }}</span>
+            <span>{{ i18n.t('settings.baseUrl') }}</span>
+            <input
+              [(ngModel)]="form.llm_base_url"
+              name="llm_base_url"
+              dir="ltr"
+              [placeholder]="i18n.t('settings.providerDefault')"
+            />
+          </label>
+          <label class="field">
+            <span>
+              {{ i18n.t('settings.apiKey') }}
+              {{ flags.api_key_set ? i18n.t('settings.stored') : i18n.t('settings.notSet') }}
+            </span>
             <input
               type="password"
               [(ngModel)]="form.llm_api_key"
               name="llm_api_key"
               autocomplete="off"
+              dir="ltr"
               [disabled]="clear.llm_api_key"
-              [placeholder]="flags.api_key_set ? '•••••••• leave blank to keep' : 'sk-…'"
+              [placeholder]="
+                flags.api_key_set
+                  ? i18n.t('settings.apiKeyKeep')
+                  : i18n.t('settings.apiKeyPlaceholder')
+              "
             />
           </label>
           <label class="check">
             <input type="checkbox" [(ngModel)]="clear.llm_api_key" name="clear_llm" />
-            Clear stored API key
+            {{ i18n.t('settings.clearApiKey') }}
           </label>
           <label class="field narrow">
-            <span>Temperature</span>
+            <span>{{ i18n.t('settings.temperature') }}</span>
             <input
               type="number"
               step="0.1"
               min="0"
               max="2"
+              dir="ltr"
               [(ngModel)]="form.llm_temperature"
               name="llm_temperature"
             />
           </label>
           <div class="actions">
             <button type="button" class="ghost" (click)="testLlm()" [disabled]="testing !== ''">
-              {{ testing === 'llm' ? 'Testing…' : 'Test LLM' }}
+              {{ testing === 'llm' ? i18n.t('settings.testing') : i18n.t('settings.testLlm') }}
             </button>
             @if (testTarget === 'llm' && testResult) {
               <span [class.ok]="testOk" [class.err]="!testOk">{{ testResult }}</span>
@@ -74,84 +90,101 @@ import { ChatService } from '../../services/chat.service';
         </fieldset>
 
         <fieldset>
-          <legend>Nobitex</legend>
+          <legend>{{ i18n.t('settings.nobitex') }}</legend>
           <label class="field narrow">
-            <span>Environment</span>
+            <span>{{ i18n.t('settings.environment') }}</span>
             <select [(ngModel)]="form.nobitex_env" name="nobitex_env">
-              <option value="mainnet">mainnet</option>
-              <option value="testnet">testnet</option>
+              <option value="mainnet">{{ i18n.t('settings.mainnet') }}</option>
+              <option value="testnet">{{ i18n.t('settings.testnet') }}</option>
             </select>
           </label>
           <label class="field">
-            <span>Base URL override ({{ currentBaseUrl }})</span>
+            <span>{{ i18n.t('settings.baseUrlOverride', { url: currentBaseUrl }) }}</span>
             <input
               [(ngModel)]="form.nobitex_base_url"
               name="nobitex_base_url"
-              placeholder="leave blank for the environment default"
+              dir="ltr"
+              [placeholder]="i18n.t('settings.baseUrlPlaceholder')"
             />
           </label>
           <label class="field narrow">
-            <span>Auth mode</span>
+            <span>{{ i18n.t('settings.authMode') }}</span>
             <select [(ngModel)]="form.nobitex_auth_mode" name="nobitex_auth_mode">
-              <option value="">auto-detect</option>
-              <option value="token">token</option>
-              <option value="key">Ed25519 key</option>
+              <option value="">{{ i18n.t('settings.autoDetect') }}</option>
+              <option value="token">{{ i18n.t('settings.token') }}</option>
+              <option value="key">{{ i18n.t('settings.ed25519') }}</option>
             </select>
           </label>
           <label class="field">
-            <span>API token {{ flags.token_set ? '(stored)' : '(not set)' }}</span>
+            <span>
+              {{ i18n.t('settings.apiToken') }}
+              {{ flags.token_set ? i18n.t('settings.stored') : i18n.t('settings.notSet') }}
+            </span>
             <input
               type="password"
               [(ngModel)]="form.nobitex_token"
               name="nobitex_token"
               autocomplete="off"
+              dir="ltr"
               [disabled]="clear.nobitex_token"
-              [placeholder]="flags.token_set ? '•••••••• leave blank to keep' : 'Nobitex API token'"
+              [placeholder]="
+                flags.token_set
+                  ? i18n.t('settings.apiKeyKeep')
+                  : i18n.t('settings.nobitexTokenPlaceholder')
+              "
             />
           </label>
           <label class="check">
             <input type="checkbox" [(ngModel)]="clear.nobitex_token" name="clear_token" />
-            Clear stored token
+            {{ i18n.t('settings.clearToken') }}
           </label>
           <label class="field">
-            <span>Ed25519 public key {{ flags.public_key_set ? '(stored)' : '(not set)' }}</span>
+            <span>
+              {{ i18n.t('settings.publicKey') }}
+              {{ flags.public_key_set ? i18n.t('settings.stored') : i18n.t('settings.notSet') }}
+            </span>
             <input
               type="password"
               [(ngModel)]="form.nobitex_public_key"
               name="nobitex_public_key"
               autocomplete="off"
+              dir="ltr"
               [disabled]="clear.nobitex_public_key"
             />
           </label>
           <label class="check">
             <input type="checkbox" [(ngModel)]="clear.nobitex_public_key" name="clear_public" />
-            Clear stored public key
+            {{ i18n.t('settings.clearPublicKey') }}
           </label>
           <label class="field">
-            <span>Ed25519 private key {{ flags.private_key_set ? '(stored)' : '(not set)' }}</span>
+            <span>
+              {{ i18n.t('settings.privateKey') }}
+              {{ flags.private_key_set ? i18n.t('settings.stored') : i18n.t('settings.notSet') }}
+            </span>
             <input
               type="password"
               [(ngModel)]="form.nobitex_private_key"
               name="nobitex_private_key"
               autocomplete="off"
+              dir="ltr"
               [disabled]="clear.nobitex_private_key"
             />
           </label>
           <label class="check">
             <input type="checkbox" [(ngModel)]="clear.nobitex_private_key" name="clear_private" />
-            Clear stored private key
+            {{ i18n.t('settings.clearPrivateKey') }}
           </label>
           <label class="check">
             <input type="checkbox" [(ngModel)]="form.nobitex_dry_run" name="dry_run" />
-            Paper trading (dry run)
+            {{ i18n.t('settings.paperTrading') }}
           </label>
           <label class="check">
             <input type="checkbox" [(ngModel)]="form.nobitex_read_only" name="read_only" />
-            Read-only (block all orders)
+            {{ i18n.t('settings.readOnly') }}
           </label>
           <div class="actions">
             <button type="button" class="ghost" (click)="testNobitex()" [disabled]="testing !== ''">
-              {{ testing === 'nobitex' ? 'Testing…' : 'Test Nobitex' }}
+              {{ testing === 'nobitex' ? i18n.t('settings.testing') : i18n.t('settings.testNobitex') }}
             </button>
             @if (testTarget === 'nobitex' && testResult) {
               <span [class.ok]="testOk" [class.err]="!testOk">{{ testResult }}</span>
@@ -160,34 +193,35 @@ import { ChatService } from '../../services/chat.service';
         </fieldset>
 
         <fieldset>
-          <legend>Agent &amp; scheduler</legend>
+          <legend>{{ i18n.t('settings.agentScheduler') }}</legend>
           <label class="field narrow">
-            <span>Max iterations</span>
+            <span>{{ i18n.t('settings.maxIterations') }}</span>
             <input
               type="number"
               min="1"
               max="500"
+              dir="ltr"
               [(ngModel)]="form.agent_max_iterations"
               name="agent_max_iterations"
             />
           </label>
           <label class="field narrow">
-            <span>Scheduler timezone</span>
-            <input [(ngModel)]="form.scheduler_timezone" name="scheduler_timezone" />
+            <span>{{ i18n.t('settings.schedulerTimezone') }}</span>
+            <input [(ngModel)]="form.scheduler_timezone" name="scheduler_timezone" dir="ltr" />
           </label>
           <label class="check">
             <input type="checkbox" [(ngModel)]="form.scheduler_enabled" name="scheduler_enabled" />
-            Enable scheduled tasks
+            {{ i18n.t('settings.enableScheduler') }}
           </label>
           <label class="check danger">
             <input type="checkbox" [(ngModel)]="form.allow_withdrawals" name="allow_withdrawals" />
-            Allow withdrawal and credential tools (dangerous)
+            {{ i18n.t('settings.allowWithdrawals') }}
           </label>
         </fieldset>
 
         <div class="actions">
           <button type="button" class="primary" (click)="save()" [disabled]="saving">
-            {{ saving ? 'Saving…' : 'Save configuration' }}
+            {{ saving ? i18n.t('settings.saving') : i18n.t('settings.save') }}
           </button>
           @if (message) {
             <span class="ok">{{ message }}</span>
@@ -327,6 +361,7 @@ import { ChatService } from '../../services/chat.service';
 export class SettingsPanelComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly chat = inject(ChatService);
+  readonly i18n = inject(I18nService);
 
   loading = true;
   saving = false;
@@ -395,7 +430,7 @@ export class SettingsPanelComponent implements OnInit {
       const updated = await firstValueFrom(this.api.updateSettings(this.payload()));
       this.apply(updated);
       this.chat.reset();
-      this.message = 'Saved. New chat sessions use this configuration.';
+      this.message = this.i18n.t('settings.saved');
     } catch (err) {
       this.error = this.describe(err);
     } finally {
@@ -517,8 +552,10 @@ export class SettingsPanelComponent implements OnInit {
       return detail;
     }
     if (Array.isArray(detail)) {
-      return detail.map((item) => (item as { msg?: string })?.msg ?? 'invalid value').join('; ');
+      return detail
+        .map((item) => (item as { msg?: string })?.msg ?? this.i18n.t('settings.invalidValue'))
+        .join('; ');
     }
-    return failure?.message ?? 'Request failed';
+    return failure?.message ?? this.i18n.t('settings.requestFailed');
   }
 }

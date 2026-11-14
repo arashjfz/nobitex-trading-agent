@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field
 class ChatRequest(BaseModel):
     session_id: str | None = Field(default=None, description="Conversation id; created if omitted")
     message: str = Field(min_length=1, description="User instruction for the agent")
+    language: Literal["en", "fa", "ar", "de"] | None = Field(
+        default=None, description="Preferred reply language"
+    )
 
 
 class SettingsUpdate(BaseModel):

@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Candle } from '../../models';
+import { I18nService } from '../../i18n/i18n.service';
 
 interface Bar {
   cx: number;
@@ -20,7 +21,7 @@ interface Bar {
   template: `
     <div class="chart-wrap">
       @if (bars().length === 0) {
-        <p class="empty">No candles yet.</p>
+        <p class="empty">{{ i18n.t('chart.empty') }}</p>
       } @else {
         <svg [attr.viewBox]="'0 0 ' + width + ' ' + height" preserveAspectRatio="none">
           @for (bar of bars(); track $index) {
@@ -87,6 +88,7 @@ interface Bar {
 })
 export class CandleChartComponent {
   readonly candles = input<Candle[]>([]);
+  readonly i18n = inject(I18nService);
   readonly width = 800;
   readonly height = 320;
 
