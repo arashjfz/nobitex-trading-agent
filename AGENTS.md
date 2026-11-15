@@ -65,6 +65,10 @@ frontend proxy (`frontend/proxy.conf.json`) must match the backend port.
   and optional `yDomain` for box-select zoom. Pointer drags map client coordinates through
   the SVG viewBox, so keep `preserveAspectRatio="none"` and the `width`/`height` constants
   in sync when changing the chart layout.
+- `tool-view.component.ts` renders tool-specific views (order book, analysis, wallets,
+  stats, margin markets, orders, trades). Margin market results are parsed from structured
+  `data.markets` when present and fall back to the line-based text format emitted by the
+  MCP server; keep both paths working when changing that view.
 - Schedule deletion is confirmed in an in-app modal before `DELETE /api/schedules/{id}` is
   called; do not replace it with `window.confirm`.
 - Scheduled prompts run unattended with the same safety flags as chat; keep
