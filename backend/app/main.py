@@ -413,6 +413,22 @@ def delete_schedule(task_id: str) -> dict[str, Any]:
     return {"deleted": task_id}
 
 
+@app.get("/api/runs")
+def list_runs(
+    task_id: str | None = Query(None, description="Filter by scheduled task"),
+    limit: int = Query(50, ge=1, le=200),
+) -> dict[str, Any]:
+    return {"runs": scheduler.list_runs(task_id=task_id, limit=limit)}
+
+
+@app.get("/api/runs/{run_id}")
+def get_run(run_id: str) -> dict[str, Any]:
+    run = scheduler.get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Scheduled run not found")
+    return run
+
+
 @app.post("/api/schedules/{task_id}/run")
 def run_schedule(task_id: str) -> dict[str, Any]:
     if scheduler.get(task_id) is None:

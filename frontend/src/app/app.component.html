@@ -138,6 +138,9 @@
       <button type="button" [class.active]="tab() === 'schedule'" (click)="tab.set('schedule')">
         {{ i18n.t('tabs.schedule') }}
       </button>
+      <button type="button" [class.active]="tab() === 'runs'" (click)="openRuns()">
+        {{ i18n.t('tabs.runs') }}
+      </button>
       <button type="button" [class.active]="tab() === 'settings'" (click)="tab.set('settings')">
         {{ i18n.t('tabs.settings') }}
       </button>
@@ -155,7 +158,10 @@
         />
       }
       @case ('schedule') {
-        <app-schedule-panel />
+        <app-schedule-panel (showRuns)="openRuns($event)" />
+      }
+      @case ('runs') {
+        <app-schedule-runs [taskId]="runsTaskId()" />
       }
       @case ('settings') {
         <app-settings-panel />

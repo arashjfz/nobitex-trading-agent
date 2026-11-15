@@ -24,9 +24,20 @@ import { ToolViewComponent } from '../tool-view/tool-view.component';
           <h2>{{ i18n.t('chat.title') }}</h2>
           <p class="hint">{{ i18n.t('chat.hint') }}</p>
         </div>
-        <span class="status" [class.open]="chat.status() === 'open'">
-          {{ i18n.t('chat.status.' + chat.status()) }}
-        </span>
+        <div class="actions">
+          <button
+            type="button"
+            class="clear"
+            (click)="chat.clear()"
+            [disabled]="chat.messages().length === 0"
+            [title]="i18n.t('chat.clearHint')"
+          >
+            {{ i18n.t('chat.clear') }}
+          </button>
+          <span class="status" [class.open]="chat.status() === 'open'">
+            {{ i18n.t('chat.status.' + chat.status()) }}
+          </span>
+        </div>
       </header>
 
       <div class="messages" #scroller>
@@ -110,6 +121,29 @@ import { ToolViewComponent } from '../tool-view/tool-view.component';
         border-radius: 999px;
         background: #1e293b;
         color: #94a3b8;
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .clear {
+        background: transparent;
+        border: 1px solid #1e293b;
+        color: #94a3b8;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 10px;
+        cursor: pointer;
+      }
+      .clear:hover:not(:disabled) {
+        border-color: #38bdf8;
+        color: #7dd3fc;
+      }
+      .clear:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
       }
       .status.open {
         background: #052e1a;

@@ -350,10 +350,16 @@ h1 {
 
 .right app-order-ticket,
 .right app-schedule-panel,
+.right app-schedule-runs,
 .right app-settings-panel {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+.right app-schedule-runs {
+  overflow: hidden;
+  display: flex;
 }
 
 .scan {

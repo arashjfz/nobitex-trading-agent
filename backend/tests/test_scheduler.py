@@ -19,7 +19,20 @@ class FakeSession:
     def send(self, message: str) -> None:
         self.status = "running"
         self.history = [
-            {"type": "MessageEvent", "source": "assistant", "text": f"done: {message}"}
+            {"type": "MessageEvent", "source": "user", "text": message},
+            {
+                "type": "ActionEvent",
+                "tool_name": "analyze_market",
+                "thought": "checking the market",
+                "action": {"symbol": "BTCUSDT"},
+            },
+            {
+                "type": "ObservationEvent",
+                "tool_name": "analyze_market",
+                "observation": '{"signal": "BUY"}',
+                "data": {"signal": "BUY"},
+            },
+            {"type": "MessageEvent", "source": "assistant", "text": f"done: {message}"},
         ]
         self.status = "idle"
 
@@ -112,4 +125,36 @@ def test_execute_records_result(tmp_path) -> None:
     assert current["last_status"] == "ok"
     assert current["last_result"] == "done: find opportunities"
     assert current["run_count"] == 1
+    assert current["last_run_id"]
     assert manager.removed == ["fake-session"]
+
+    runs = scheduler.list_runs(task["id"])
+    assert len(runs) == 1
+    assert runs[0]["status"] == "ok"
+    assert runs[0]["trigger"] == "manual"
+    assert runs[0]["event_count"] == 4
+
+    detail = scheduler.get_run(current["last_run_id"])
+    assert detail is not None
+    assert [event["type"] for event in detail["events"]] == [
+        "MessageEvent",
+        "ActionEvent",
+        "ObservationEvent",
+        "MessageEvent",
+    ]
+    assert detail["events"][0]["source"] == "user"
+
+
+def test_deleting_task_removes_its_runs(tmp_path) -> None:
+    scheduler = _scheduler(tmp_path)
+    task = scheduler.create(prompt="scan", cron="0 9 * * *")
+    scheduler.run_now(task["id"])
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        runs = scheduler.list_runs(task["id"])
+        if runs and runs[0]["status"] != "running":
+            break
+        time.sleep(0.05)
+
+    assert scheduler.delete(task["id"]) is True
+    assert scheduler.list_runs(task["id"]) == []

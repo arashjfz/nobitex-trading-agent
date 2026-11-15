@@ -11,10 +11,12 @@ vendored `nobitex-mcp` server, and an Angular 20 dashboard.
 
 - `backend/app/` — FastAPI app. `agent_factory.py` builds the agent and the default MCP
   config; `technical.py` is the indicator engine; `tools.py` defines `AnalyzeMarketTool`;
-  `scheduler.py` is the SQLite cron scheduler; `scheduler_mcp.py` exposes it to the agent
-  as an MCP server.
+  `scheduler.py` is the SQLite cron scheduler and run-history store; `scheduler_mcp.py`
+  exposes it to the agent as an MCP server.
 - `backend/tests/` — pytest suite (technical, API, agent config, scheduler).
-- `frontend/src/app/` — standalone Angular components + services.
+- `frontend/src/app/` — standalone Angular components + services. `schedule-runs/` renders
+  saved scheduler transcripts; `services/chat-events.ts` maps SDK events to chat messages
+  for both live chat and run history.
 - `mcp/nobitex-mcp/` — vendored Nobitex MCP server (do not edit unless updating the vendor).
 
 ## Commands
@@ -55,6 +57,16 @@ frontend proxy (`frontend/proxy.conf.json`) must match the backend port.
 - Cron expressions are evaluated in `SCHEDULER_TIMEZONE` (default `Asia/Tehran`). Runs
   missed while the API was down are skipped on startup, and stale `running` statuses are
   marked `interrupted`.
+- Every scheduler execution is stored in `scheduled_runs` with its full serialized event
+  list (newest 50 per task). Deleting a task deletes its runs. The UI reads
+  `GET /api/runs` and `GET /api/runs/{id}`; keep those payloads JSON-safe because they are
+  persisted before being served.
+- `candle-chart.component.ts` keeps its view window in `range` (absolute candle indices)
+  and optional `yDomain` for box-select zoom. Pointer drags map client coordinates through
+  the SVG viewBox, so keep `preserveAspectRatio="none"` and the `width`/`height` constants
+  in sync when changing the chart layout.
+- Schedule deletion is confirmed in an in-app modal before `DELETE /api/schedules/{id}` is
+  called; do not replace it with `window.confirm`.
 - Scheduled prompts run unattended with the same safety flags as chat; keep
   `NOBITEX_DRY_RUN=true` unless the operator explicitly opts in.
 - `ActionEvent.thought` is a `Sequence[TextContent]`, not a string. Always run websocket

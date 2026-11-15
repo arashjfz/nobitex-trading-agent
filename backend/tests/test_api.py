@@ -107,6 +107,30 @@ def test_validate_cron_rejects_bad_expression() -> None:
     assert response.json()["valid"] is False
 
 
+def test_run_history_endpoints(monkeypatch) -> None:
+    run = {
+        "id": "r1",
+        "task_id": "t1",
+        "task_name": "morning",
+        "status": "ok",
+        "started_at": "2026-01-01T09:00:00+00:00",
+        "finished_at": "2026-01-01T09:01:00+00:00",
+        "event_count": 2,
+        "events": [{"type": "MessageEvent", "source": "assistant", "text": "done"}],
+    }
+    monkeypatch.setattr(main.scheduler, "list_runs", lambda task_id=None, limit=50: [run])
+    monkeypatch.setattr(main.scheduler, "get_run", lambda run_id: run if run_id == "r1" else None)
+    with TestClient(app) as client:
+        listed = client.get("/api/runs?task_id=t1")
+        detail = client.get("/api/runs/r1")
+        missing = client.get("/api/runs/nope")
+    assert listed.status_code == 200
+    assert listed.json()["runs"][0]["id"] == "r1"
+    assert detail.status_code == 200
+    assert detail.json()["events"][0]["text"] == "done"
+    assert missing.status_code == 404
+
+
 def test_create_schedule_endpoint(monkeypatch) -> None:
     captured: dict = {}
 
