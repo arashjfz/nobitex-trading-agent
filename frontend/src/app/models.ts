@@ -29,9 +29,27 @@ export interface ScheduledTask {
   next_run: string | null;
   last_run_at: number | null;
   last_run: string | null;
+  last_run_id: string | null;
   last_status: string | null;
   last_result: string | null;
   run_count: number;
+}
+
+export interface ScheduledRun {
+  id: string;
+  task_id: string;
+  task_name: string;
+  prompt: string;
+  trigger: 'manual' | 'cron' | string;
+  started_at: string;
+  finished_at: string | null;
+  status: string;
+  result: string | null;
+  event_count: number;
+}
+
+export interface ScheduledRunDetail extends ScheduledRun {
+  events: ChatEvent[];
 }
 
 export interface ScheduleRequest {

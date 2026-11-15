@@ -7,6 +7,7 @@ import { CandleChartComponent } from './components/candle-chart/candle-chart.com
 import { ChatPanelComponent } from './components/chat-panel/chat-panel.component';
 import { OrderTicketComponent } from './components/order-ticket/order-ticket.component';
 import { SchedulePanelComponent } from './components/schedule-panel/schedule-panel.component';
+import { ScheduleRunsComponent } from './components/schedule-runs/schedule-runs.component';
 import { SettingsPanelComponent } from './components/settings-panel/settings-panel.component';
 
 @Component({
@@ -16,6 +17,7 @@ import { SettingsPanelComponent } from './components/settings-panel/settings-pan
     ChatPanelComponent,
     OrderTicketComponent,
     SchedulePanelComponent,
+    ScheduleRunsComponent,
     SettingsPanelComponent,
     FormsModule,
   ],
@@ -35,7 +37,8 @@ export class AppComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly symbol = signal('BTCUSDT');
   readonly resolution = signal('60');
-  readonly tab = signal<'chat' | 'order' | 'scan' | 'schedule' | 'settings'>('chat');
+  readonly tab = signal<'chat' | 'order' | 'scan' | 'schedule' | 'runs' | 'settings'>('chat');
+  readonly runsTaskId = signal<string | null>(null);
 
   readonly resolutions = [
     { value: '15', label: '15m' },
@@ -116,6 +119,11 @@ export class AppComponent implements OnInit {
     this.symbol.set(symbol);
     this.tab.set('chat');
     this.analyze();
+  }
+
+  openRuns(taskId: string | null = null): void {
+    this.runsTaskId.set(taskId);
+    this.tab.set('runs');
   }
 
   onMarketSelected(symbol: string): void {

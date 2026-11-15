@@ -218,6 +218,15 @@ check the next run times, and press **Schedule task**. From chat, just ask, e.g.
 _"every day at 9am find the best opportunities and buy or sell up to 50 dollars"_ — the
 agent converts it to cron, validates it, and calls `schedule_task`.
 
+Every execution is also saved as a chat transcript. Open the **Runs** tab (or press
+**History** on a scheduled task) to browse past runs, filter by task, and read the full
+conversation including tool calls and observations. The newest 50 runs per task are kept.
+Deleting a scheduled task asks for confirmation and removes its saved runs as well.
+
+The candle chart shows localized time labels under the price grid. Drag a box across the
+chart to zoom into that time and price range; the **+**, **−**, and **⟲** controls adjust
+or reset the zoom.
+
 Scheduled prompts run unattended. Keep them self-contained (budget, markets, stop-loss)
 and remember that paper trading (`NOBITEX_DRY_RUN=true`) is the default. Runs missed while
 the API was down are skipped: on startup each task is re-armed for its next future
@@ -252,6 +261,8 @@ occurrence.
 | `DELETE` | `/api/schedules/{id}` | Delete a scheduled task |
 | `POST` | `/api/schedules/{id}/run` | Run a task now |
 | `POST` | `/api/schedules/validate` | Validate cron and preview next runs |
+| `GET` | `/api/runs` | List saved scheduled runs (`task_id`, `limit`) |
+| `GET` | `/api/runs/{id}` | Get one run with its full chat transcript |
 | `GET` | `/api/settings` | Masked runtime configuration |
 | `PUT` | `/api/settings` | Update configuration and persist it to `.env` |
 | `POST` | `/api/settings/test/llm` | Probe the configured LLM endpoint |

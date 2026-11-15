@@ -10,6 +10,8 @@ import {
   OrderRequest,
   ScanResult,
   ScheduleRequest,
+  ScheduledRun,
+  ScheduledRunDetail,
   ScheduledTask,
   SettingsUpdate,
 } from '../models';
@@ -61,6 +63,15 @@ export class ApiService {
 
   validateCron(cron: string): Observable<CronPreview> {
     return this.http.post<CronPreview>(`${this.base}/schedules/validate`, { cron });
+  }
+
+  runs(taskId?: string): Observable<{ runs: ScheduledRun[] }> {
+    const query = taskId ? `?task_id=${encodeURIComponent(taskId)}` : '';
+    return this.http.get<{ runs: ScheduledRun[] }>(`${this.base}/runs${query}`);
+  }
+
+  runDetail(id: string): Observable<ScheduledRunDetail> {
+    return this.http.get<ScheduledRunDetail>(`${this.base}/runs/${id}`);
   }
 
   analysis(symbol: string, resolution = '60'): Observable<Analysis> {

@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { ChatEvent, ChatMessage } from '../models';
 import { I18nService } from '../i18n/i18n.service';
 import { ApiService } from './api.service';
+import { eventToMessage } from './chat-events';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
@@ -119,80 +120,52 @@ export class ChatService {
     this.status.set('idle');
   }
 
+  clear(): void {
+    const socket = this.socket;
+    this.socket = undefined;
+    if (socket) {
+      socket.onopen = null;
+      socket.onclose = null;
+      socket.onerror = null;
+      socket.onmessage = null;
+      try {
+        socket.close();
+      } catch {
+        // The socket may already be closed; a new one is opened below.
+      }
+    }
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+    this.manualClose = false;
+    this.retry = 0;
+    this.sessionId.set(null);
+    this.messages.set([]);
+    this.running.set(false);
+    this.status.set('idle');
+    void this.connect();
+  }
+
   private handle(event: ChatEvent): void {
     switch (event.type) {
       case 'Ready':
         this.status.set('open');
-        break;
-      case 'MessageEvent':
-        if (event.source === 'user') {
-          return;
-        }
-        if (event.text?.trim()) {
-          this.push('assistant', event.text.trim());
-        }
-        break;
-      case 'ActionEvent': {
-        this.push('tool', event.thought?.trim() ?? '', event.tool_name, {
-          kind: 'action',
-          args: this.actionArgs(event.action),
-        });
-        break;
-      }
-      case 'ObservationEvent': {
-        const parsed = this.parseObservation(event.observation);
-        this.push('tool', parsed.text, event.tool_name, {
-          kind: 'observation',
-          data: event.data ?? parsed.data,
-          failed: event.is_error,
-        });
-        break;
-      }
+        return;
       case 'AgentErrorEvent':
       case 'Error':
-        this.push('error', event.error ?? this.i18n.t('chat.error.agent'));
         this.running.set(false);
         break;
       case 'Done':
         this.running.set(false);
-        break;
+        return;
       default:
         break;
     }
-  }
-
-  private actionArgs(action: unknown): Record<string, unknown> | undefined {
-    if (!action || typeof action !== 'object' || Array.isArray(action)) {
-      return undefined;
+    const message = eventToMessage(event, this.counter++, (key) => this.i18n.t(key));
+    if (message) {
+      this.messages.update((current) => [...current, message]);
     }
-    const raw = { ...(action as Record<string, unknown>) };
-    delete raw['kind'];
-    const data = raw['data'];
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
-      delete raw['data'];
-      return { ...raw, ...(data as Record<string, unknown>) };
-    }
-    return raw;
-  }
-
-  private parseObservation(observation: string | undefined): {
-    text: string;
-    data?: unknown;
-  } {
-    let text = (observation ?? '').trim();
-    const prefix = /^\[Tool '[^']+' executed\.\]\s*/;
-    text = text.replace(prefix, '');
-    if (!text) {
-      return { text: '' };
-    }
-    if (text.startsWith('{') || text.startsWith('[')) {
-      try {
-        return { text, data: JSON.parse(text) };
-      } catch {
-        return { text };
-      }
-    }
-    return { text };
   }
 
   private push(

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CronPreview, ScheduledTask } from '../../models';
 import { I18nService } from '../../i18n/i18n.service';
@@ -111,6 +111,9 @@ import { ApiService } from '../../services/api.service';
                 {{ task.enabled ? i18n.t('schedule.pause') : i18n.t('schedule.resume') }}
               </button>
               <button type="button" (click)="runNow(task)">{{ i18n.t('schedule.runNow') }}</button>
+              <button type="button" (click)="showRuns.emit(task.id)">
+                {{ i18n.t('runs.history') }}
+              </button>
               <button type="button" class="danger" (click)="remove(task)">
                 {{ i18n.t('schedule.delete') }}
               </button>
@@ -119,6 +122,23 @@ import { ApiService } from '../../services/api.service';
         }
       </div>
     </section>
+
+    @if (pendingDelete(); as task) {
+      <div class="modal-backdrop" (click)="cancelDelete()">
+        <div class="modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+          <h3>{{ i18n.t('schedule.confirmDeleteTitle') }}</h3>
+          <p>{{ i18n.t('schedule.confirmDeleteBody', { name: task.name }) }}</p>
+          <div class="modal-actions">
+            <button type="button" (click)="cancelDelete()" [disabled]="deleting()">
+              {{ i18n.t('schedule.confirmDeleteCancel') }}
+            </button>
+            <button type="button" class="danger" (click)="confirmDelete()" [disabled]="deleting()">
+              {{ i18n.t('schedule.confirmDeleteConfirm') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `,
   styles: [
     `
@@ -284,11 +304,70 @@ import { ApiService } from '../../services/api.service';
       }
       .actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
       }
       .danger {
         color: #fca5a5;
         border-color: #7f1d1d;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background: rgba(2, 6, 23, 0.72);
+        backdrop-filter: blur(4px);
+      }
+      .modal {
+        width: min(360px, 100%);
+        background: #0b1220;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      }
+      .modal h3 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+      .modal p {
+        margin: 0 0 14px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #cbd5e1;
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .modal-actions button {
+        background: #111c2e;
+        border: 1px solid #1e293b;
+        color: #cbd5e1;
+        border-radius: 7px;
+        padding: 7px 12px;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .modal-actions button:hover:not(:disabled) {
+        border-color: #38bdf8;
+      }
+      .modal-actions button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .modal-actions .danger {
+        background: #7f1d1d;
+        border-color: #991b1b;
+        color: #fee2e2;
+      }
+      .modal-actions .danger:hover:not(:disabled) {
+        background: #991b1b;
+        border-color: #ef4444;
       }
     `,
   ],
@@ -296,12 +375,15 @@ import { ApiService } from '../../services/api.service';
 export class SchedulePanelComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   readonly i18n = inject(I18nService);
+  readonly showRuns = output<string>();
 
   readonly tasks = signal<ScheduledTask[]>([]);
   readonly timezone = signal('');
   readonly preview = signal<CronPreview | null>(null);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+  readonly pendingDelete = signal<ScheduledTask | null>(null);
+  readonly deleting = signal(false);
 
   name = '';
   prompt = '';
@@ -399,9 +481,33 @@ export class SchedulePanelComponent implements OnInit, OnDestroy {
   }
 
   remove(task: ScheduledTask): void {
+    this.error.set(null);
+    this.pendingDelete.set(task);
+  }
+
+  cancelDelete(): void {
+    if (this.deleting()) {
+      return;
+    }
+    this.pendingDelete.set(null);
+  }
+
+  confirmDelete(): void {
+    const task = this.pendingDelete();
+    if (!task || this.deleting()) {
+      return;
+    }
+    this.deleting.set(true);
     this.api.deleteSchedule(task.id).subscribe({
-      next: () => this.load(),
-      error: (err) => this.error.set(err?.error?.detail ?? this.i18n.t('schedule.error.delete')),
+      next: () => {
+        this.deleting.set(false);
+        this.pendingDelete.set(null);
+        this.load();
+      },
+      error: (err) => {
+        this.deleting.set(false);
+        this.error.set(err?.error?.detail ?? this.i18n.t('schedule.error.delete'));
+      },
     });
   }
 }
