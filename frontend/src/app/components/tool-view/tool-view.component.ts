@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { ChatMessage } from '../../models';
 import { I18nService } from '../../i18n/i18n.service';
 
@@ -79,6 +79,16 @@ interface TradeRow {
   total: string;
 }
 
+interface MarginMarket {
+  symbol: string;
+  base: string;
+  quote: string;
+  maxLeverage: number;
+  feePct: string;
+  buyEnabled: boolean;
+  sellEnabled: boolean;
+}
+
 interface Generic {
   scalars: { key: string; value: string }[];
   nested: { key: string; rows: { key: string; value: string }[] }[];
@@ -93,6 +103,7 @@ type View =
   | 'server'
   | 'wallets'
   | 'stats'
+  | 'margin'
   | 'orders'
   | 'trades'
   | 'generic'
@@ -330,6 +341,78 @@ type View =
             <p class="muted">
               {{ i18n.t('tool.showing', { shown: statsView().length, total: statsTotal() }) }}
             </p>
+          }
+        }
+
+        @case ('margin') {
+          <div class="margin-summary">
+            <div class="margin-stat">
+              <span>{{ i18n.t('tool.marginMarkets') }}</span>
+              <b>{{ marginMarkets().length }}</b>
+            </div>
+            <div class="margin-stat">
+              <span>{{ i18n.t('tool.maxLeverage') }}</span>
+              <b>{{ marginMaxLeverage() }}×</b>
+            </div>
+            <div class="margin-stat">
+              <span>{{ i18n.t('tool.positionFee') }}</span>
+              <b>{{ marginFeeLabel() }}</b>
+            </div>
+          </div>
+
+          <div class="margin-tools">
+            <input
+              type="search"
+              [value]="marginQuery()"
+              (input)="marginQuery.set($any($event.target).value)"
+              [placeholder]="i18n.t('tool.searchMarket')"
+              [attr.aria-label]="i18n.t('tool.searchMarket')"
+            />
+            <div class="quote-tabs">
+              <button
+                type="button"
+                [class.active]="marginQuote() === 'all'"
+                (click)="marginQuote.set('all')"
+              >
+                {{ i18n.t('tool.all') }}
+              </button>
+              @for (quote of marginQuotes(); track quote) {
+                <button
+                  type="button"
+                  [class.active]="marginQuote() === quote"
+                  (click)="marginQuote.set(quote)"
+                >
+                  {{ quote }}
+                </button>
+              }
+            </div>
+          </div>
+
+          @if (marginFiltered().length) {
+            <div class="margin-grid">
+              @for (market of marginFiltered(); track market.symbol) {
+                <article class="margin-card">
+                  <div class="margin-top">
+                    <div class="margin-symbol">
+                      <b>{{ market.symbol }}</b>
+                      <span>{{ market.base }} / {{ market.quote }}</span>
+                    </div>
+                    <span class="lev">{{ market.maxLeverage }}×</span>
+                  </div>
+                  <div class="margin-meta">
+                    <span>{{ i18n.t('tool.positionFee') }} <b>{{ market.feePct }}</b></span>
+                    <span class="pill" [class.on]="market.buyEnabled" [class.off]="!market.buyEnabled">
+                      {{ i18n.t('tool.buy') }} {{ market.buyEnabled ? i18n.t('tool.enabled') : i18n.t('tool.disabled') }}
+                    </span>
+                    <span class="pill" [class.on]="market.sellEnabled" [class.off]="!market.sellEnabled">
+                      {{ i18n.t('tool.sell') }} {{ market.sellEnabled ? i18n.t('tool.enabled') : i18n.t('tool.disabled') }}
+                    </span>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="muted">{{ i18n.t('tool.noMatches') }}</p>
           }
         }
 
@@ -733,6 +816,143 @@ type View =
       .sell {
         color: #f87171;
       }
+      .margin-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .margin-stat {
+        background: #0b1220;
+        border: 1px solid #1e293b;
+        border-radius: 8px;
+        padding: 6px 8px;
+      }
+      .margin-stat span {
+        display: block;
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #64748b;
+      }
+      .margin-stat b {
+        font-size: 14px;
+        color: #e2e8f0;
+      }
+      .margin-tools {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .margin-tools input {
+        flex: 1 1 160px;
+        min-width: 120px;
+        background: #0b1220;
+        border: 1px solid #1e293b;
+        border-radius: 7px;
+        color: #e2e8f0;
+        padding: 6px 8px;
+        font-size: 11px;
+        font-family: inherit;
+      }
+      .margin-tools input:focus {
+        outline: none;
+        border-color: #38bdf8;
+      }
+      .quote-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .quote-tabs button {
+        background: #0b1220;
+        border: 1px solid #1e293b;
+        color: #94a3b8;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 10px;
+        cursor: pointer;
+      }
+      .quote-tabs button:hover {
+        border-color: #38bdf8;
+      }
+      .quote-tabs button.active {
+        background: #0c4a6e;
+        border-color: #0ea5e9;
+        color: #e0f2fe;
+      }
+      .margin-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 6px;
+      }
+      .margin-card {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: #0b1220;
+        border: 1px solid #1e293b;
+        border-radius: 9px;
+        padding: 8px;
+      }
+      .margin-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 6px;
+      }
+      .margin-symbol {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .margin-symbol b {
+        font-size: 12px;
+        color: #e2e8f0;
+      }
+      .margin-symbol span {
+        font-size: 9.5px;
+        color: #64748b;
+      }
+      .lev {
+        background: #172554;
+        border: 1px solid #1e40af;
+        border-radius: 6px;
+        color: #93c5fd;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 6px;
+        white-space: nowrap;
+      }
+      .margin-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        color: #94a3b8;
+      }
+      .margin-meta b {
+        color: #e2e8f0;
+      }
+      .pill {
+        border: 1px solid #1e293b;
+        border-radius: 999px;
+        padding: 1px 6px;
+        font-size: 9px;
+      }
+      .pill.on {
+        background: #052e1a;
+        border-color: #166534;
+        color: #4ade80;
+      }
+      .pill.off {
+        background: #2a0f12;
+        border-color: #7f1d1d;
+        color: #f87171;
+      }
       .raw {
         margin: 0;
         white-space: pre-wrap;
@@ -785,6 +1005,9 @@ export class ToolViewComponent {
     if (name.includes('market_stats')) {
       const stats = (this.data() as { stats?: unknown } | null)?.stats;
       return stats && typeof stats === 'object' ? 'stats' : 'generic';
+    }
+    if (name.includes('margin_market')) {
+      return this.marginMarkets().length ? 'margin' : 'generic';
     }
     if (name.includes('order')) {
       return this.orderRows().length ? 'orders' : 'generic';
@@ -982,6 +1205,46 @@ export class ToolViewComponent {
   readonly statsView = computed(() => this.stats().slice(0, 25));
   readonly statsTotal = computed(() => this.stats().length);
 
+  readonly marginQuery = signal('');
+  readonly marginQuote = signal('all');
+
+  readonly marginMarkets = computed<MarginMarket[]>(() => {
+    const seen = new Set<string>();
+    const markets: MarginMarket[] = [];
+    for (const entry of this.marginRows()) {
+      const market = this.marginRow(entry);
+      if (!market || seen.has(market.symbol)) {
+        continue;
+      }
+      seen.add(market.symbol);
+      markets.push(market);
+    }
+    return markets.sort((a, b) => a.symbol.localeCompare(b.symbol));
+  });
+
+  readonly marginQuotes = computed(() =>
+    [...new Set(this.marginMarkets().map((market) => market.quote))].sort(),
+  );
+
+  readonly marginFiltered = computed(() => {
+    const query = this.marginQuery().trim().toLowerCase();
+    const quote = this.marginQuote();
+    return this.marginMarkets().filter(
+      (market) =>
+        (quote === 'all' || market.quote === quote) &&
+        (!query || `${market.symbol} ${market.base} ${market.quote}`.toLowerCase().includes(query)),
+    );
+  });
+
+  readonly marginMaxLeverage = computed(() =>
+    Math.max(0, ...this.marginMarkets().map((market) => market.maxLeverage)),
+  );
+
+  readonly marginFeeLabel = computed(() => {
+    const fees = [...new Set(this.marginMarkets().map((market) => market.feePct))];
+    return fees.length ? fees.join(' · ') : '—';
+  });
+
   readonly orders = computed<OrderRow[]>(() => this.orderRows());
 
   readonly trades = computed<TradeRow[]>(() => this.tradeRows());
@@ -1100,6 +1363,108 @@ export class ToolViewComponent {
       return 'sell';
     }
     return '';
+  }
+
+  private marginRows(): { symbol?: string; row: Record<string, unknown> }[] {
+    const raw = this.data();
+    const rows: { symbol?: string; row: Record<string, unknown> }[] = [];
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const data = raw as Record<string, unknown>;
+      const container = data['markets'] ?? data;
+      if (Array.isArray(container)) {
+        for (const item of container) {
+          if (item && typeof item === 'object' && !Array.isArray(item)) {
+            const row = item as Record<string, unknown>;
+            rows.push({ symbol: String(row['symbol'] ?? ''), row });
+          }
+        }
+      } else if (container && typeof container === 'object') {
+        for (const [key, value] of Object.entries(container as Record<string, unknown>)) {
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            rows.push({ symbol: key, row: value as Record<string, unknown> });
+          }
+        }
+      }
+      if (!rows.length && ('srcCurrency' in data || 'maxLeverage' in data)) {
+        rows.push({ symbol: String(data['symbol'] ?? ''), row: data });
+      }
+    }
+    if (rows.length) {
+      return rows;
+    }
+
+    let pending = '';
+    for (const line of this.message().text.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.toLowerCase() === 'markets') {
+        continue;
+      }
+      if (trimmed.startsWith('{')) {
+        try {
+          const row = JSON.parse(trimmed) as Record<string, unknown>;
+          if (row && typeof row === 'object' && !Array.isArray(row)) {
+            rows.push({ symbol: pending, row });
+          }
+        } catch {
+          // Keep scanning; a malformed line should not hide the rest of the result.
+        }
+        pending = '';
+      } else if (!trimmed.startsWith('[')) {
+        pending = trimmed;
+      }
+    }
+    return rows;
+  }
+
+  private marginRow(entry: { symbol?: string; row: Record<string, unknown> }): MarginMarket | null {
+    const row = entry.row;
+    const rawSymbol = String(row['symbol'] ?? entry.symbol ?? '').trim().toUpperCase();
+    const src = String(row['srcCurrency'] ?? row['base'] ?? '').trim();
+    const dst = String(row['dstCurrency'] ?? row['quote'] ?? '').trim();
+    let base = (src || rawSymbol.replace(/(USDT|IRT|RLS)$/i, '')).toUpperCase();
+    let quote = (
+      dst ||
+      (rawSymbol.endsWith('USDT')
+        ? 'usdt'
+        : rawSymbol.endsWith('IRT')
+          ? 'irt'
+          : rawSymbol.endsWith('RLS')
+            ? 'rls'
+            : '')
+    ).toUpperCase();
+    if (quote === 'RLS') {
+      quote = 'IRT';
+    }
+    const symbol = rawSymbol || `${base}${quote}`;
+    if (!symbol) {
+      return null;
+    }
+    const leverage = Number(row['maxLeverage'] ?? row['max_leverage'] ?? 0);
+    const fee = Number(row['positionFeeRate'] ?? row['position_fee_rate'] ?? 0);
+    return {
+      symbol,
+      base: base || '—',
+      quote: quote || '—',
+      maxLeverage: Number.isFinite(leverage) ? leverage : 0,
+      feePct: Number.isFinite(fee)
+        ? `${(fee * 100).toLocaleString('en-US', { maximumFractionDigits: 4 })}%`
+        : '—',
+      buyEnabled: this.flag(row['buyEnabled'] ?? row['buy_enabled']),
+      sellEnabled: this.flag(row['sellEnabled'] ?? row['sell_enabled']),
+    };
+  }
+
+  private flag(value: unknown, fallback = true): boolean {
+    if (value === null || value === undefined || value === '') {
+      return fallback;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return value !== 0;
+    }
+    return !['false', '0', 'no', 'off', 'disabled'].includes(String(value).toLowerCase());
   }
 
   private orderRows(): OrderRow[] {
